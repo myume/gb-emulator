@@ -1,6 +1,5 @@
-mod cpu;
-mod instructions;
+use gb_emulator::gb::GameBoy;
 
 fn main() {
-    println!("Hello, world!");
+    GameBoy::new();
 }
