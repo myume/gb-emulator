@@ -1,9 +1,12 @@
 use std::{collections::BTreeMap, fs::File, io::BufReader, path::Path};
 
-use proc_macro2::Span;
-use quote::quote;
+use proc_macro2::{Span, TokenStream};
+use quote::{format_ident, quote};
 use serde::{Deserialize, Serialize};
-use syn::LitInt;
+use syn::{
+    LitInt,
+    token::{Minus, MinusEq, Plus, PlusEq},
+};
 
 #[derive(Serialize, Deserialize)]
 struct OpcodeTable {
@@ -57,9 +60,13 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
         let hex_literal = LitInt::new(opcode, Span::call_site());
         let cycles = entry.cycles[0];
         let bytes = entry.bytes;
+
+        let body = generate_opcode_body(&entry);
+
         quote! {
             #[doc = #full_instruction]
             #hex_literal => {
+                #body
                 self.cpu.registers.pc += #bytes;
                 #cycles
             }
@@ -80,4 +87,49 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
 
     let ast = syn::parse2(instructions).unwrap();
     prettyplease::unparse(&ast)
+}
+
+fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
+    match entry.mnemonic.as_str() {
+        "NOP" => quote! {},
+        "LD" => handle_load_instruction(entry),
+        "INC" => handle_inc_dec_instruction(entry),
+        "DEC" => handle_inc_dec_instruction(entry),
+        _ => quote! {
+            // todo!("Unhandled Instruction");
+        },
+    }
+}
+
+fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
+    let reg = entry.operands[0].name.to_lowercase();
+    if reg.len() == 1 || reg == "sp" || reg == "pc" {
+        let op = if entry.mnemonic == "INC" {
+            syn::BinOp::AddAssign(PlusEq::default())
+        } else {
+            syn::BinOp::SubAssign(MinusEq::default())
+        };
+        let reg = format_ident!("{}", reg);
+        quote! {
+            self.cpu.registers.#reg #op 1;
+        }
+    } else {
+        let setter = format_ident!("set_{}", reg);
+        let reg = format_ident!("{}", reg);
+        let op = if entry.mnemonic == "INC" {
+            syn::BinOp::Add(Plus::default())
+        } else {
+            syn::BinOp::Sub(Minus::default())
+        };
+        quote! {
+            self.cpu.registers.#setter(
+                self.cpu.registers.#reg() #op 1
+            );
+        }
+    }
+}
+
+fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
+    assert_eq!(entry.mnemonic, "LD");
+    quote! {}
 }
