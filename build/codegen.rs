@@ -21,7 +21,7 @@ struct Operand {
 #[derive(Serialize, Deserialize)]
 struct OpcodeEntry {
     mnemonic: String,
-    bytes: u8,
+    bytes: u16,
     cycles: Vec<usize>,
     immediate: bool,
     flags: Flags,
@@ -67,11 +67,12 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
     });
 
     let instructions = quote! {
+        #[allow(unused_doc_comments)]
         impl GameBoy {
-            pub fn execute_opcode(&mut self, opcode: u8) {
+            pub fn execute_opcode(&mut self, opcode: u8) -> Cycles {
                 match opcode {
                     #(#match_arms,)*
-                    _ => unreachable!("Encountered illegal opcode"),
+                    // _ => unreachable!("Encountered illegal opcode"),
                 }
             }
         }
