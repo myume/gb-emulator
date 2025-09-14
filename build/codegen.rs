@@ -107,7 +107,8 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
 fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "INC" || entry.mnemonic == "DEC");
 
-    let reg = entry.operands[0].name.to_lowercase();
+    let operand = &entry.operands[0];
+    let reg = operand.name.to_lowercase();
     let setter = format_ident!("set_{}", reg);
     let getter = format_ident!("{}", reg);
     let op = if entry.mnemonic == "INC" {
@@ -115,10 +116,50 @@ fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
     } else {
         format_ident!("wrapping_sub")
     };
+
+    let load = if operand.immediate {
+        quote! {
+            let val = self.cpu.registers.#getter();
+        }
+    } else {
+        quote! {
+            let val = self.mmu.read_byte(self.cpu.registers.#getter());
+        }
+    };
+    let store = if operand.immediate {
+        quote! {
+            self.cpu.registers.#setter(
+                val.#op(1)
+            );
+        }
+    } else {
+        quote! {
+            self.mmu.write_byte(self.cpu.registers.#getter(), val.#op(1));
+        }
+    };
+
+    let flags = if entry.mnemonic == "INC"
+        && (!vec!["bc", "de", "sp"].contains(&reg.as_str()) || reg == "hl" && !operand.immediate)
+    {
+        quote! {
+            self.cpu.registers.set_flag(CpuFlags::Z, self.cpu.registers.#getter() == 0);
+            self.cpu.registers.set_flag(CpuFlags::N, false);
+            self.cpu.registers.set_flag(CpuFlags::H, (val & 0x0F) + 1 > 0x0F);
+        }
+    } else if entry.mnemonic == "DEC" {
+        quote! {
+            self.cpu.registers.set_flag(CpuFlags::Z, self.cpu.registers.#getter() == 0);
+            self.cpu.registers.set_flag(CpuFlags::N, true);
+            self.cpu.registers.set_flag(CpuFlags::H, (val & 0x0F) == 0);
+        }
+    } else {
+        quote! {}
+    };
+
     quote! {
-        self.cpu.registers.#setter(
-            self.cpu.registers.#getter().#op(1)
-        );
+        #load
+        #store
+        #flags
     }
 }
 
