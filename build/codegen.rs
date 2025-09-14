@@ -52,8 +52,12 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
             entry
                 .operands
                 .iter()
-                .map(|operand| operand.name.as_str())
-                .collect::<Vec<&str>>()
+                .map(|operand| if operand.immediate {
+                    operand.name.clone()
+                } else {
+                    format!("[{}]", operand.name)
+                })
+                .collect::<Vec<String>>()
                 .join(",")
         );
         let hex_literal = LitInt::new(opcode, Span::call_site());
