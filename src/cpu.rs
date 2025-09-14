@@ -31,6 +31,14 @@ pub struct Registers {
     pc: u16,
 }
 
+#[derive(Copy, Clone)]
+pub enum CpuFlags {
+    Z = 0b10000000,
+    N = 0b01000000,
+    H = 0b00100000,
+    C = 0b00010000,
+}
+
 impl Registers {
     pub fn new() -> Self {
         Registers {
@@ -44,6 +52,14 @@ impl Registers {
             l: 0,
             sp: 0,
             pc: 0,
+        }
+    }
+
+    pub fn set_flag(&mut self, flag: CpuFlags, set: bool) {
+        let mask = flag as u8;
+        match set {
+            true => self.f |= mask,
+            false => self.f &= !mask,
         }
     }
 

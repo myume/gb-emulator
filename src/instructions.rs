@@ -1,3 +1,4 @@
+use crate::cpu::CpuFlags;
 use crate::cpu::Cycles;
 use crate::gb::GameBoy;
 
