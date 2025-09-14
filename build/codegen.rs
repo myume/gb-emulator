@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 use serde::{Deserialize, Serialize};
 use syn::{
     LitInt,
-    token::{Minus, MinusEq, Plus, PlusEq},
+    token::{Minus, Plus},
 };
 
 #[derive(Serialize, Deserialize)]
@@ -67,7 +67,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
             #[doc = #full_instruction]
             #hex_literal => {
                 #body
-                self.cpu.registers.pc += #bytes;
+                self.cpu.registers.set_pc(self.cpu.registers.pc() + #bytes);
                 #cycles
             }
         }
@@ -102,34 +102,27 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
 }
 
 fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "INC" || entry.mnemonic == "DEC");
+
     let reg = entry.operands[0].name.to_lowercase();
-    if reg.len() == 1 || reg == "sp" || reg == "pc" {
-        let op = if entry.mnemonic == "INC" {
-            syn::BinOp::AddAssign(PlusEq::default())
-        } else {
-            syn::BinOp::SubAssign(MinusEq::default())
-        };
-        let reg = format_ident!("{}", reg);
-        quote! {
-            self.cpu.registers.#reg #op 1;
-        }
+    let setter = format_ident!("set_{}", reg);
+    let getter = format_ident!("{}", reg);
+    let op = if entry.mnemonic == "INC" {
+        syn::BinOp::Add(Plus::default())
     } else {
-        let setter = format_ident!("set_{}", reg);
-        let reg = format_ident!("{}", reg);
-        let op = if entry.mnemonic == "INC" {
-            syn::BinOp::Add(Plus::default())
-        } else {
-            syn::BinOp::Sub(Minus::default())
-        };
-        quote! {
-            self.cpu.registers.#setter(
-                self.cpu.registers.#reg() #op 1
-            );
-        }
+        syn::BinOp::Sub(Minus::default())
+    };
+    quote! {
+        self.cpu.registers.#setter(
+            self.cpu.registers.#getter() #op 1
+        );
     }
 }
 
 fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
     assert_eq!(entry.mnemonic, "LD");
+    let dest = &entry.operands[0];
+    let src = &entry.operands[1];
+
     quote! {}
 }
