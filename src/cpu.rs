@@ -103,7 +103,7 @@ create_base_registers!(
     pc: u16
 );
 
-create_combined_registers!((b, c), (d, e), (h, l));
+create_combined_registers!((a, f), (b, c), (d, e), (h, l));
 
 #[cfg(test)]
 mod test {
