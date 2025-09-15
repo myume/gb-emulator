@@ -12,6 +12,26 @@ impl CPU {
             registers: Registers::new(),
         }
     }
+
+    pub fn alu_add(&mut self, b: u8, add_carry: bool) {
+        let a = self.registers.a();
+        let c = if add_carry {
+            self.registers.get_flag(CpuFlags::C) as u8
+        } else {
+            0
+        };
+        let sum = a.wrapping_add(b).wrapping_add(c);
+        self.registers.set_a(sum);
+
+        self.registers.set_flag(CpuFlags::Z, sum == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers
+            .set_flag(CpuFlags::H, (a & 0x0F) + (b & 0x0F) > 0x0F);
+        self.registers.set_flag(
+            CpuFlags::C,
+            (a as u16 & 0xFF) + (b as u16 & 0xFF) + (c as u16 & 0xFF) > 0xFF,
+        );
+    }
 }
 
 pub struct Registers {
@@ -53,6 +73,11 @@ impl Registers {
             sp: 0,
             pc: 0,
         }
+    }
+
+    pub fn get_flag(&self, flag: CpuFlags) -> bool {
+        let mask = flag as u8;
+        self.f & !mask > 0
     }
 
     pub fn set_flag(&mut self, flag: CpuFlags, set: bool) {

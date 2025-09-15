@@ -77,7 +77,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
     });
 
     let instructions = quote! {
-        #[allow(unused_doc_comments)]
+        #[allow(unused_doc_comments,unreachable_code)]
         impl GameBoy {
             pub fn execute_opcode(&mut self, opcode: u8) -> Cycles {
                 match opcode {
@@ -98,8 +98,9 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "LD" => handle_load_instruction(entry),
         "INC" => handle_inc_dec_instruction(entry),
         "DEC" => handle_inc_dec_instruction(entry),
+        "ADD" => handle_add(entry),
         _ => quote! {
-            // todo!("Unhandled Instruction");
+            todo!("Unhandled Instruction");
         },
     }
 }
@@ -296,3 +297,93 @@ fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
         #increment
     }
 }
+
+fn handle_add(entry: &OpcodeEntry) -> TokenStream {
+    assert_eq!(entry.mnemonic, "ADD");
+
+    let rhs = &entry.operands[1];
+    let lhs = &entry.operands[0];
+
+    assert!(is_register(&lhs.name));
+
+    match lhs.name.to_lowercase().as_str() {
+        "a" => {
+            if is_register(&rhs.name) && rhs.immediate {
+                let reg = format_ident!("{}", rhs.name.to_lowercase());
+                quote! {
+                    self.cpu.alu_add(self.cpu.registers.#reg(), false);
+                }
+            } else if is_register(&rhs.name) && !rhs.immediate {
+                let reg = format_ident!("{}", rhs.name.to_lowercase());
+                quote! {
+                    let b = self.mmu.read_byte(self.cpu.registers.#reg());
+                    self.cpu.alu_add(b, false);
+                }
+            } else {
+                // must be immediate value. no instruction for immediate addresses
+                quote! {
+                    let b = self.mmu.read_byte(self.cpu.registers.pc() + 1);
+                    self.cpu.alu_add(b, false);
+                }
+            }
+        }
+
+        "hl" => {
+            assert!(is_register(&rhs.name) && rhs.immediate);
+
+            let reg = format_ident!("{}", rhs.name.to_lowercase());
+            quote! {
+                let sum = self.cpu.registers.hl().wrapping_add(self.cpu.registers.#reg());
+                self.cpu.registers.set_flag(CpuFlags::N, false);
+                self.cpu.registers.set_flag(CpuFlags::H, (self.cpu.registers.hl() as u32 & 0x0FFF) + (self.cpu.registers.#reg() as u32 & 0x0FFF) > 0x0FFF);
+                self.cpu.registers.set_flag(CpuFlags::C, (self.cpu.registers.hl() as u32 & 0xFFFF) + (self.cpu.registers.#reg() as u32 & 0xFFFF) > 0xFFFF);
+                self.cpu.registers.set_hl(sum);
+            }
+        }
+
+        "sp" => {
+            assert!(!is_register(&rhs.name) && rhs.immediate);
+
+            quote! {
+                let b = self.mmu.read_byte(self.cpu.registers.pc() + 1) as i8 as i16 as u16;
+                self.cpu.registers.set_flag(CpuFlags::Z, false);
+                self.cpu.registers.set_flag(CpuFlags::N, false);
+                self.cpu.registers.set_flag(CpuFlags::H, (self.cpu.registers.sp() & 0x0F) + (b & 0x0F) > 0x0F);
+                self.cpu.registers.set_flag(CpuFlags::C, (self.cpu.registers.sp() & 0xFF) + (b & 0xFF) > 0xFF);
+                self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_add(b));
+            }
+        }
+
+        _ => unreachable!(),
+    }
+}
+
+// fn handle_sub(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_adc(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_sbc(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_and(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_or(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_xor(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_cp(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_sbc(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_daa(entry: &OpcodeEntry) -> TokenStream {
+// }
+//
+// fn handle_scf(entry: &OpcodeEntry) -> TokenStream {
+// }
