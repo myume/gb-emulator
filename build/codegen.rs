@@ -99,6 +99,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "INC" => handle_inc_dec_instruction(entry),
         "DEC" => handle_inc_dec_instruction(entry),
         "ADD" => handle_add(entry),
+        "SUB" => handle_sub(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -358,8 +359,33 @@ fn handle_add(entry: &OpcodeEntry) -> TokenStream {
     }
 }
 
-// fn handle_sub(entry: &OpcodeEntry) -> TokenStream {
-// }
+fn handle_sub(entry: &OpcodeEntry) -> TokenStream {
+    assert_eq!(entry.mnemonic, "SUB");
+
+    let rhs = &entry.operands[1];
+    let lhs = &entry.operands[0];
+
+    assert_eq!(lhs.name, "A");
+
+    if is_register(&rhs.name) && rhs.immediate {
+        let reg = format_ident!("{}", rhs.name.to_lowercase());
+        quote! {
+            self.cpu.alu_sub(self.cpu.registers.#reg(), false);
+        }
+    } else if is_register(&rhs.name) && !rhs.immediate {
+        let reg = format_ident!("{}", rhs.name.to_lowercase());
+        quote! {
+            let b = self.mmu.read_byte(self.cpu.registers.#reg());
+            self.cpu.alu_sub(b, false);
+        }
+    } else {
+        // must be immediate value. no instruction for immediate addresses
+        quote! {
+            let b = self.mmu.read_byte(self.cpu.registers.pc() + 1);
+            self.cpu.alu_sub(b, false);
+        }
+    }
+}
 //
 // fn handle_adc(entry: &OpcodeEntry) -> TokenStream {
 // }

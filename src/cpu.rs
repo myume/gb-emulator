@@ -26,10 +26,30 @@ impl CPU {
         self.registers.set_flag(CpuFlags::Z, sum == 0);
         self.registers.set_flag(CpuFlags::N, false);
         self.registers
-            .set_flag(CpuFlags::H, (a & 0x0F) + (b & 0x0F) > 0x0F);
+            .set_flag(CpuFlags::H, (a & 0x0F) + (b & 0x0F) + (c & 0x0F) > 0x0F);
         self.registers.set_flag(
             CpuFlags::C,
             (a as u16 & 0xFF) + (b as u16 & 0xFF) + (c as u16 & 0xFF) > 0xFF,
+        );
+    }
+
+    pub fn alu_sub(&mut self, b: u8, sub_carry: bool) {
+        let a = self.registers.a();
+        let c = if sub_carry {
+            self.registers.get_flag(CpuFlags::C) as u8
+        } else {
+            0
+        };
+        let sum = a.wrapping_sub(b).wrapping_sub(c);
+        self.registers.set_a(sum);
+
+        self.registers.set_flag(CpuFlags::Z, sum == 0);
+        self.registers.set_flag(CpuFlags::N, true);
+        self.registers
+            .set_flag(CpuFlags::H, (a & 0x0F) < (b & 0x0F) + (c & 0x0F));
+        self.registers.set_flag(
+            CpuFlags::C,
+            (a as u16 & 0xFF) < (b as u16 & 0xFF) + (c as u16 & 0xFF),
         );
     }
 }
