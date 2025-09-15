@@ -33,17 +33,17 @@ impl CPU {
         );
     }
 
-    pub fn alu_sub(&mut self, rhs: u8, sub_carry: bool) {
+    /// Perform a sub operation. Return sum and set flags.
+    pub fn alu_sub_flags(&mut self, rhs: u8, sub_carry: bool) -> u8 {
         let lhs = self.registers.a();
         let c = if sub_carry {
             self.registers.get_flag(CpuFlags::C) as u8
         } else {
             0
         };
-        let sum = lhs.wrapping_sub(rhs).wrapping_sub(c);
-        self.registers.set_a(sum);
+        let diff = lhs.wrapping_sub(rhs).wrapping_sub(c);
 
-        self.registers.set_flag(CpuFlags::Z, sum == 0);
+        self.registers.set_flag(CpuFlags::Z, diff == 0);
         self.registers.set_flag(CpuFlags::N, true);
         self.registers
             .set_flag(CpuFlags::H, (lhs & 0x0F) < (rhs & 0x0F) + (c & 0x0F));
@@ -51,6 +51,49 @@ impl CPU {
             CpuFlags::C,
             (lhs as u16 & 0xFF) < (rhs as u16 & 0xFF) + (c as u16 & 0xFF),
         );
+        diff
+    }
+
+    pub fn alu_sub(&mut self, rhs: u8, sub_carry: bool) {
+        let diff = self.alu_sub_flags(rhs, sub_carry);
+        self.registers.set_a(diff);
+    }
+
+    pub fn alu_and(&mut self, rhs: u8) {
+        let lhs = self.registers.a();
+        let result = lhs & rhs;
+        self.registers.set_a(result);
+
+        self.registers.set_flag(CpuFlags::Z, result == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, true);
+        self.registers.set_flag(CpuFlags::C, false);
+    }
+
+    pub fn alu_or(&mut self, rhs: u8) {
+        let lhs = self.registers.a();
+        let result = lhs | rhs;
+        self.registers.set_a(result);
+
+        self.registers.set_flag(CpuFlags::Z, result == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, false);
+    }
+
+    pub fn alu_xor(&mut self, rhs: u8) {
+        let lhs = self.registers.a();
+        let result = lhs ^ rhs;
+        self.registers.set_a(result);
+
+        self.registers.set_flag(CpuFlags::Z, result == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, false);
+    }
+
+    pub fn alu_cp(&mut self, rhs: u8) {
+        self.alu_sub_flags(rhs, false);
     }
 }
 

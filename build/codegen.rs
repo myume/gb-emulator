@@ -102,6 +102,10 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "ADC" => handle_add(entry, true),
         "SUB" => handle_sub(entry, false),
         "SBC" => handle_sub(entry, true),
+        "AND" => handle_boolean_op(entry),
+        "OR" => handle_boolean_op(entry),
+        "XOR" => handle_boolean_op(entry),
+        "CP" => handle_boolean_op(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -303,6 +307,7 @@ fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
 
 fn handle_add(entry: &OpcodeEntry, carry: bool) -> TokenStream {
     assert!(entry.mnemonic == "ADD" || entry.mnemonic == "ADC");
+    assert_eq!(entry.operands.len(), 2);
 
     let rhs = &entry.operands[1];
     let lhs = &entry.operands[0];
@@ -363,6 +368,7 @@ fn handle_add(entry: &OpcodeEntry, carry: bool) -> TokenStream {
 
 fn handle_sub(entry: &OpcodeEntry, carry: bool) -> TokenStream {
     assert!(entry.mnemonic == "SUB" || entry.mnemonic == "SBC");
+    assert_eq!(entry.operands.len(), 2);
 
     let rhs = &entry.operands[1];
     let lhs = &entry.operands[0];
@@ -389,9 +395,42 @@ fn handle_sub(entry: &OpcodeEntry, carry: bool) -> TokenStream {
     }
 }
 
-// fn handle_and(entry: &OpcodeEntry) -> TokenStream {
-// }
-//
+fn handle_boolean_op(entry: &OpcodeEntry) -> TokenStream {
+    assert!(
+        entry.mnemonic == "AND"
+            || entry.mnemonic == "XOR"
+            || entry.mnemonic == "OR"
+            || entry.mnemonic == "CP"
+    );
+    assert_eq!(entry.operands.len(), 2);
+
+    let lhs = &entry.operands[0];
+    let rhs = &entry.operands[1];
+
+    assert_eq!(lhs.name.to_lowercase(), "a");
+
+    let operation = format_ident!("alu_{}", entry.mnemonic.to_lowercase());
+
+    if is_register(&rhs.name) && rhs.immediate {
+        let reg = format_ident!("{}", rhs.name.to_lowercase());
+        quote! {
+            self.cpu.#operation(self.cpu.registers.#reg());
+        }
+    } else if is_register(&rhs.name) && !rhs.immediate {
+        let reg = format_ident!("{}", rhs.name.to_lowercase());
+        quote! {
+            let rhs = self.mmu.read_byte(self.cpu.registers.#reg());
+            self.cpu.#operation(rhs);
+        }
+    } else {
+        // must be immediate value. no instruction for immediate addresses
+        quote! {
+            let rhs = self.mmu.read_byte(self.cpu.registers.pc() + 1);
+            self.cpu.#operation(rhs);
+        }
+    }
+}
+
 // fn handle_or(entry: &OpcodeEntry) -> TokenStream {
 // }
 //
