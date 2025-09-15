@@ -13,43 +13,43 @@ impl CPU {
         }
     }
 
-    pub fn alu_add(&mut self, b: u8, add_carry: bool) {
-        let a = self.registers.a();
+    pub fn alu_add(&mut self, rhs: u8, add_carry: bool) {
+        let lhs = self.registers.a();
         let c = if add_carry {
             self.registers.get_flag(CpuFlags::C) as u8
         } else {
             0
         };
-        let sum = a.wrapping_add(b).wrapping_add(c);
+        let sum = lhs.wrapping_add(rhs).wrapping_add(c);
         self.registers.set_a(sum);
 
         self.registers.set_flag(CpuFlags::Z, sum == 0);
         self.registers.set_flag(CpuFlags::N, false);
         self.registers
-            .set_flag(CpuFlags::H, (a & 0x0F) + (b & 0x0F) + (c & 0x0F) > 0x0F);
+            .set_flag(CpuFlags::H, (lhs & 0x0F) + (rhs & 0x0F) + (c & 0x0F) > 0x0F);
         self.registers.set_flag(
             CpuFlags::C,
-            (a as u16 & 0xFF) + (b as u16 & 0xFF) + (c as u16 & 0xFF) > 0xFF,
+            (lhs as u16 & 0xFF) + (rhs as u16 & 0xFF) + (c as u16 & 0xFF) > 0xFF,
         );
     }
 
-    pub fn alu_sub(&mut self, b: u8, sub_carry: bool) {
-        let a = self.registers.a();
+    pub fn alu_sub(&mut self, rhs: u8, sub_carry: bool) {
+        let lhs = self.registers.a();
         let c = if sub_carry {
             self.registers.get_flag(CpuFlags::C) as u8
         } else {
             0
         };
-        let sum = a.wrapping_sub(b).wrapping_sub(c);
+        let sum = lhs.wrapping_sub(rhs).wrapping_sub(c);
         self.registers.set_a(sum);
 
         self.registers.set_flag(CpuFlags::Z, sum == 0);
         self.registers.set_flag(CpuFlags::N, true);
         self.registers
-            .set_flag(CpuFlags::H, (a & 0x0F) < (b & 0x0F) + (c & 0x0F));
+            .set_flag(CpuFlags::H, (lhs & 0x0F) < (rhs & 0x0F) + (c & 0x0F));
         self.registers.set_flag(
             CpuFlags::C,
-            (a as u16 & 0xFF) < (b as u16 & 0xFF) + (c as u16 & 0xFF),
+            (lhs as u16 & 0xFF) < (rhs as u16 & 0xFF) + (c as u16 & 0xFF),
         );
     }
 }
