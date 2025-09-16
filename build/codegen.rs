@@ -125,6 +125,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "CPL" => handle_cpl(entry),
         "SCF" => handle_scf(entry),
         "CCF" => handle_ccf(entry),
+        "DAA" => handle_daa(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -600,4 +601,9 @@ fn handle_ccf(entry: &OpcodeEntry) -> TokenStream {
     }
 }
 
-// fn handle_daa(entry: &OpcodeEntry) -> TokenStream {}
+fn handle_daa(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "DAA");
+    quote! {
+        self.cpu.alu_daa();
+    }
+}

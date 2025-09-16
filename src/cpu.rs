@@ -157,6 +157,40 @@ impl CPU {
         self.registers.set_flag(CpuFlags::N, true);
         self.registers.set_flag(CpuFlags::H, true);
     }
+
+    pub fn alu_daa(&mut self) {
+        let a = self.registers.a();
+        let mut adjustment = 0;
+
+        let n = self.registers.get_flag(CpuFlags::N);
+        let h = self.registers.get_flag(CpuFlags::H);
+        let c = self.registers.get_flag(CpuFlags::C);
+
+        if n {
+            if h {
+                adjustment += 0x06;
+            }
+            if c {
+                adjustment += 0x60;
+            }
+            self.registers
+                .set_a(self.registers.a().wrapping_sub(adjustment));
+        } else {
+            if h || a & 0x0F > 0x09 {
+                adjustment += 0x06;
+            }
+
+            if c || a > 0x99 {
+                adjustment += 0x60;
+            }
+            self.registers.set_a(a.wrapping_add(adjustment));
+        }
+
+        self.registers
+            .set_flag(CpuFlags::Z, self.registers.a() == 0);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, adjustment >= 0x60);
+    }
 }
 
 pub struct Registers {
