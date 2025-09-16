@@ -130,6 +130,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "RETI" => handle_ret(entry),
         "POP" => handle_pop(entry),
         "PUSH" => handle_push(entry),
+        "CALL" => handle_call(entry),
         _ => quote! {
             unreachable!("Unhandled Instruction");
         },
@@ -564,17 +565,7 @@ fn handle_jump(entry: &OpcodeEntry) -> TokenStream {
                 }
             };
 
-            let condition = if cond.len() == 2 {
-                assert!(cond.starts_with("N"));
-                let (_, cond) = cond.split_at(1);
-                quote! {
-                    !self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
-                }
-            } else {
-                quote! {
-                    self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
-                }
-            };
+            let condition = conditional(cond);
 
             quote! {
                 if #condition {
@@ -634,17 +625,7 @@ fn handle_ret(entry: &OpcodeEntry) -> TokenStream {
         let untaken_cycles = entry.cycles[1];
         let bytes = entry.bytes;
 
-        let condition = if cond.len() == 2 {
-            assert!(cond.starts_with("N"));
-            let (_, cond) = cond.split_at(1);
-            quote! {
-                !self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
-            }
-        } else {
-            quote! {
-                self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
-            }
-        };
+        let condition = conditional(cond);
 
         quote! {
             if #condition {
@@ -703,6 +684,58 @@ fn handle_push(entry: &OpcodeEntry) -> TokenStream {
     push_stack(&entry.operands[0].name)
 }
 
-// fn handle_call(entry: &OpcodeEntry) -> TokenStream {}
+fn conditional(cond: &str) -> TokenStream {
+    if cond.len() == 2 {
+        assert!(cond.starts_with("N"));
+        let (_, cond) = cond.split_at(1);
+        quote! {
+            !self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
+        }
+    } else {
+        quote! {
+            self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
+        }
+    }
+}
+
+fn handle_call(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "CALL");
+
+    let bytes = entry.bytes;
+    let load = quote! {
+        let address = self.mmu.read_word(self.cpu.registers.pc().wrapping_add(1));
+        self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+    };
+
+    let base_call = {
+        let push_pc = push_stack("pc");
+        let cycles = entry.cycles[0];
+        quote! {
+            #load
+            #push_pc
+            self.cpu.registers.set_pc(address);
+            #cycles
+        }
+    };
+
+    if entry.operands.len() == 2 {
+        let cond = &entry.operands[0].name;
+        let untaken_cycles = entry.cycles[1];
+
+        let condition = conditional(cond);
+
+        quote! {
+            if #condition {
+                #base_call
+            } else {
+                self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+                #untaken_cycles
+            }
+        }
+    } else {
+        base_call
+    }
+}
+
 // fn handle_rst(entry: &OpcodeEntry) -> TokenStream {}
 // fn handle_ldh(entry: &OpcodeEntry) -> TokenStream {}
