@@ -4,13 +4,19 @@ pub type Cycles = usize;
 
 pub struct CPU {
     pub registers: Registers,
+    ime: bool, // ime flag
 }
 
 impl CPU {
     pub fn new() -> Self {
         CPU {
             registers: Registers::new(),
+            ime: false,
         }
+    }
+
+    pub fn set_ime(&mut self, set: bool) {
+        self.ime = set;
     }
 
     pub fn alu_add(&mut self, rhs: u8, add_carry: bool) {

@@ -126,6 +126,8 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "SCF" => handle_scf(entry),
         "CCF" => handle_ccf(entry),
         "DAA" => handle_daa(entry),
+        "RET" => handle_ret(entry),
+        "RETI" => handle_ret(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -605,5 +607,57 @@ fn handle_daa(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "DAA");
     quote! {
         self.cpu.alu_daa();
+    }
+}
+
+fn handle_ret(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "RET" || entry.mnemonic == "RETI");
+    let base = quote! {
+        let ret = self.mmu.read_word(self.cpu.registers.sp());
+        self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_add(2));
+        self.cpu.registers.set_pc(ret);
+    };
+
+    if entry.operands.len() == 1 {
+        let cond = &entry.operands[0].name;
+        let taken_cycles = entry.cycles[0];
+        let untaken_cycles = entry.cycles[1];
+        let bytes = entry.bytes;
+
+        let condition = if cond.len() > 1 {
+            assert!(cond.starts_with("N"));
+            let (_, cond) = cond.split_at(1);
+            quote! {
+                !self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
+            }
+        } else {
+            quote! {
+                self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
+            }
+        };
+
+        quote! {
+            if #condition {
+                #base
+                #taken_cycles
+            } else {
+                self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+                #untaken_cycles
+            }
+        }
+    } else {
+        let cycles = entry.cycles[0];
+        let enable_interrupts = if entry.mnemonic == "RETI" {
+            quote! {
+                self.cpu.set_ime(true);
+            }
+        } else {
+            quote! {}
+        };
+        quote! {
+            #base
+            #enable_interrupts
+            #cycles
+        }
     }
 }
