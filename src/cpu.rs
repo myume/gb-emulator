@@ -176,6 +176,23 @@ pub enum CpuFlags {
     C = 0b00010000,
 }
 
+#[derive(Debug)]
+pub enum CpuFlagError {
+    ParseError,
+}
+
+impl CpuFlags {
+    pub fn from_str(s: &str) -> Result<Self, CpuFlagError> {
+        match s {
+            "Z" => Ok(Self::Z),
+            "N" => Ok(Self::N),
+            "H" => Ok(Self::H),
+            "C" => Ok(Self::C),
+            _ => Err(CpuFlagError::ParseError),
+        }
+    }
+}
+
 impl Registers {
     pub fn new() -> Self {
         Registers {

@@ -61,8 +61,19 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
                 .join(",")
         );
         let hex_literal = LitInt::new(opcode, Span::call_site());
-        let cycles = entry.cycles[0];
-        let bytes = entry.bytes;
+        let epilogue =
+            // These instructions alter the PC and can take multiple possible cycles
+            // so handle them individually
+            if ["JP", "JR", "CALL", "RET", "RETI", "RST"].contains(&entry.mnemonic.as_str()) {
+                quote! {}
+            } else {
+                let cycles = entry.cycles[0];
+                let bytes = entry.bytes;
+                quote! {
+                    self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+                    #cycles
+                }
+            };
 
         let body = generate_opcode_body(&entry);
 
@@ -70,8 +81,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
             #[doc = #full_instruction]
             #hex_literal => {
                 #body
-                self.cpu.registers.set_pc(self.cpu.registers.pc() + #bytes);
-                #cycles
+                #epilogue
             }
         }
     });
@@ -98,10 +108,10 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "LD" => handle_load_instruction(entry),
         "INC" => handle_inc_dec_instruction(entry),
         "DEC" => handle_inc_dec_instruction(entry),
-        "ADD" => handle_add(entry, false),
-        "ADC" => handle_add(entry, true),
-        "SUB" => handle_sub(entry, false),
-        "SBC" => handle_sub(entry, true),
+        "ADD" => handle_add(entry),
+        "ADC" => handle_add(entry),
+        "SUB" => handle_sub(entry),
+        "SBC" => handle_sub(entry),
         "AND" => handle_boolean_op(entry),
         "OR" => handle_boolean_op(entry),
         "XOR" => handle_boolean_op(entry),
@@ -110,6 +120,8 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "RLA" => handle_rla(entry),
         "RRCA" => handle_rrca(entry),
         "RRA" => handle_rra(entry),
+        "JP" => handle_jump(entry),
+        "JR" => handle_jump(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -275,7 +287,7 @@ fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
         };
 
         quote! {
-            let address = self.mmu.read_word(self.cpu.registers.pc() + 1);
+            let address = self.mmu.read_word(self.cpu.registers.pc().wrapping_add(1));
             self.mmu.#write_op(address, #loaded_val);
         }
     };
@@ -309,10 +321,11 @@ fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
     }
 }
 
-fn handle_add(entry: &OpcodeEntry, carry: bool) -> TokenStream {
+fn handle_add(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "ADD" || entry.mnemonic == "ADC");
     assert_eq!(entry.operands.len(), 2);
 
+    let carry = entry.mnemonic == "ADC";
     let rhs = &entry.operands[1];
     let lhs = &entry.operands[0];
 
@@ -334,7 +347,7 @@ fn handle_add(entry: &OpcodeEntry, carry: bool) -> TokenStream {
             } else {
                 // must be immediate value. no instruction for immediate addresses
                 quote! {
-                    let b = self.mmu.read_byte(self.cpu.registers.pc() + 1);
+                    let b = self.mmu.read_byte(self.cpu.registers.pc().wrapping_add(1));
                     self.cpu.alu_add(b, #carry);
                 }
             }
@@ -357,7 +370,7 @@ fn handle_add(entry: &OpcodeEntry, carry: bool) -> TokenStream {
             assert!(!is_register(&rhs.name) && rhs.immediate);
 
             quote! {
-                let b = self.mmu.read_byte(self.cpu.registers.pc() + 1) as i8 as i16 as u16;
+                let b = self.mmu.read_byte(self.cpu.registers.pc().wrapping_add(1)) as i8 as i16 as u16;
                 self.cpu.registers.set_flag(CpuFlags::Z, false);
                 self.cpu.registers.set_flag(CpuFlags::N, false);
                 self.cpu.registers.set_flag(CpuFlags::H, (self.cpu.registers.sp() & 0x0F) + (b & 0x0F) > 0x0F);
@@ -370,10 +383,11 @@ fn handle_add(entry: &OpcodeEntry, carry: bool) -> TokenStream {
     }
 }
 
-fn handle_sub(entry: &OpcodeEntry, carry: bool) -> TokenStream {
+fn handle_sub(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "SUB" || entry.mnemonic == "SBC");
     assert_eq!(entry.operands.len(), 2);
 
+    let carry = entry.mnemonic == "SBC";
     let rhs = &entry.operands[1];
     let lhs = &entry.operands[0];
 
@@ -393,7 +407,7 @@ fn handle_sub(entry: &OpcodeEntry, carry: bool) -> TokenStream {
     } else {
         // must be immediate value. no instruction for immediate addresses
         quote! {
-            let b = self.mmu.read_byte(self.cpu.registers.pc() + 1);
+            let b = self.mmu.read_byte(self.cpu.registers.pc().wrapping_add(1));
             self.cpu.alu_sub(b, #carry);
         }
     }
@@ -429,7 +443,7 @@ fn handle_boolean_op(entry: &OpcodeEntry) -> TokenStream {
     } else {
         // must be immediate value. no instruction for immediate addresses
         quote! {
-            let rhs = self.mmu.read_byte(self.cpu.registers.pc() + 1);
+            let rhs = self.mmu.read_byte(self.cpu.registers.pc().wrapping_add(1));
             self.cpu.#operation(rhs);
         }
     }
@@ -464,5 +478,95 @@ fn handle_rra(entry: &OpcodeEntry) -> TokenStream {
 
     quote! {
         self.cpu.alu_rra();
+    }
+}
+
+fn handle_jump(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "JP" || entry.mnemonic == "JR");
+
+    let relative = entry.mnemonic == "JR";
+
+    match entry.operands.len() {
+        1 => {
+            // jump to address
+
+            let loaded_val = if relative {
+                format_ident!("offset")
+            } else {
+                format_ident!("address")
+            };
+
+            let load_op = if relative {
+                format_ident!("read_byte")
+            } else {
+                format_ident!("read_word")
+            };
+
+            let reg = if is_register(&entry.operands[0].name) {
+                let reg = format_ident!("{}", entry.operands[0].name.to_lowercase());
+                quote! {
+                    self.cpu.registers.#reg()
+                }
+            } else {
+                quote! {
+                    self.cpu.registers.pc().wrapping_add(1)
+                }
+            };
+            let load = quote! {
+                let #loaded_val = self.mmu.#load_op(#reg);
+            };
+
+            let set = if relative {
+                let bytes = entry.bytes;
+                quote! {
+                    let address = self.cpu.registers.pc().wrapping_add(#bytes).wrapping_add(#loaded_val as i8 as i16 as u16);
+                    self.cpu.registers.set_pc(address);
+                }
+            } else {
+                quote! {
+                    self.cpu.registers.set_pc(#loaded_val);
+                }
+            };
+
+            assert_eq!(entry.cycles.len(), 1);
+            let cycles = entry.cycles[0];
+            quote! {
+                #load
+                #set
+                #cycles
+            }
+        }
+        2 => {
+            // jump to address on condition
+            let conds = &entry.operands[0].name;
+            let taken_cycles = entry.cycles[0];
+            let untaken_cycles = entry.cycles[1];
+
+            let bytes = entry.bytes;
+            let load_and_jump = if relative {
+                quote! {
+                    let offset = self.mmu.read_byte(self.cpu.registers.pc().wrapping_add(1));
+                    let address = self.cpu.registers.pc().wrapping_add(#bytes).wrapping_add(offset as i8 as i16 as u16);
+                    self.cpu.registers.set_pc(address);
+                }
+            } else {
+                quote! {
+                    let address = self.mmu.read_word(self.cpu.registers.pc().wrapping_add(1));
+                    self.cpu.registers.set_pc(address);
+                }
+            };
+
+            quote! {
+                let condition = #conds.chars().map(|c| CpuFlags::from_str(&c.to_string()).expect("Invalid flag in condition")).all(|flag| self.cpu.registers.get_flag(flag));
+                if condition {
+                    #load_and_jump
+                    #taken_cycles
+                } else {
+                    self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+                    #untaken_cycles
+                }
+            }
+        }
+        _ => unreachable!(),
     }
 }
