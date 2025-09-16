@@ -106,6 +106,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "OR" => handle_boolean_op(entry),
         "XOR" => handle_boolean_op(entry),
         "CP" => handle_boolean_op(entry),
+        "RLCA" => handle_rlca(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -431,20 +432,10 @@ fn handle_boolean_op(entry: &OpcodeEntry) -> TokenStream {
     }
 }
 
-// fn handle_or(entry: &OpcodeEntry) -> TokenStream {
-// }
-//
-// fn handle_xor(entry: &OpcodeEntry) -> TokenStream {
-// }
-//
-// fn handle_cp(entry: &OpcodeEntry) -> TokenStream {
-// }
-//
-// fn handle_sbc(entry: &OpcodeEntry) -> TokenStream {
-// }
-//
-// fn handle_daa(entry: &OpcodeEntry) -> TokenStream {
-// }
-//
-// fn handle_scf(entry: &OpcodeEntry) -> TokenStream {
-// }
+fn handle_rlca(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "RLCA");
+
+    quote! {
+        self.cpu.alu_rlca();
+    }
+}

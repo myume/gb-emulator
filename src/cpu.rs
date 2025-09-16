@@ -95,6 +95,16 @@ impl CPU {
     pub fn alu_cp(&mut self, rhs: u8) {
         self.alu_sub_flags(rhs, false);
     }
+
+    pub fn alu_rlca(&mut self) {
+        let a = self.registers.a();
+        self.registers.set_a(a.rotate_left(1));
+
+        self.registers.set_flag(CpuFlags::Z, false);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, a >= 0b1000_0000);
+    }
 }
 
 pub struct Registers {
@@ -140,7 +150,7 @@ impl Registers {
 
     pub fn get_flag(&self, flag: CpuFlags) -> bool {
         let mask = flag as u8;
-        self.f & !mask > 0
+        self.f & mask > 0
     }
 
     pub fn set_flag(&mut self, flag: CpuFlags, set: bool) {
@@ -234,5 +244,57 @@ mod test {
         assert_eq!(regs.bc(), 0x1234);
         assert_eq!(regs.b(), 0x12);
         assert_eq!(regs.c(), 0x34);
+    }
+
+    #[test]
+    fn test_alu_add() {
+        let mut cpu = CPU::new();
+        cpu.alu_add(10, false);
+        assert_eq!(cpu.registers.a(), 10);
+    }
+
+    #[test]
+    fn test_alu_add_carry() {
+        let mut cpu = CPU::new();
+        cpu.registers.set_flag(CpuFlags::C, true);
+        cpu.alu_add(10, true);
+
+        assert_eq!(cpu.registers.a(), 11);
+    }
+
+    #[test]
+    fn test_alu_add_flags() {
+        let mut cpu = CPU::new();
+        cpu.registers.set_a(1);
+        cpu.alu_add(0xFF, false);
+        assert_eq!(cpu.registers.a(), 0);
+        assert!(cpu.registers.get_flag(CpuFlags::Z));
+        assert!(!cpu.registers.get_flag(CpuFlags::N));
+        assert!(cpu.registers.get_flag(CpuFlags::H));
+        assert!(cpu.registers.get_flag(CpuFlags::C));
+    }
+
+    #[test]
+    fn test_alu_sub() {
+        let mut cpu = CPU::new();
+        cpu.alu_sub(1, false);
+        assert_eq!(cpu.registers.a(), 0xFF);
+        assert!(!cpu.registers.get_flag(CpuFlags::Z));
+        assert!(cpu.registers.get_flag(CpuFlags::N));
+        assert!(cpu.registers.get_flag(CpuFlags::H));
+        assert!(cpu.registers.get_flag(CpuFlags::C));
+    }
+
+    #[test]
+    fn test_rlca() {
+        let mut cpu = CPU::new();
+
+        assert!(!cpu.registers.get_flag(CpuFlags::C));
+
+        cpu.registers.set_a(0b1000_0000);
+        cpu.alu_rlca();
+
+        assert!(cpu.registers.get_flag(CpuFlags::C));
+        assert_eq!(cpu.registers.a(), 0b0000_0001);
     }
 }
