@@ -64,7 +64,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
         let epilogue =
             // These instructions alter the PC and can take multiple possible cycles
             // so handle them individually
-            if ["JP", "JR", "CALL", "RET", "RETI", "RST"].contains(&entry.mnemonic.as_str()) || entry.mnemonic == "PREFIX" {
+            if ["JP", "JR", "CALL", "RET", "RETI", "RST"].contains(&entry.mnemonic.as_str()) || entry.mnemonic == "PREFIX" || entry.mnemonic.starts_with("ILLEGAL") {
                 quote! {}
             } else {
                 let cycles = entry.cycles[0];
@@ -128,8 +128,9 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "DAA" => handle_daa(entry),
         "RET" => handle_ret(entry),
         "RETI" => handle_ret(entry),
+        "POP" => handle_pop(entry),
         _ => quote! {
-            todo!("Unhandled Instruction");
+            unreachable!("Unhandled Instruction");
         },
     }
 }
@@ -623,11 +624,8 @@ fn handle_daa(entry: &OpcodeEntry) -> TokenStream {
 
 fn handle_ret(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "RET" || entry.mnemonic == "RETI");
-    let base = quote! {
-        let ret = self.mmu.read_word(self.cpu.registers.sp());
-        self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_add(2));
-        self.cpu.registers.set_pc(ret);
-    };
+
+    let pop = pop_stack("pc");
 
     if entry.operands.len() == 1 {
         let cond = &entry.operands[0].name;
@@ -649,7 +647,7 @@ fn handle_ret(entry: &OpcodeEntry) -> TokenStream {
 
         quote! {
             if #condition {
-                #base
+                #pop
                 #taken_cycles
             } else {
                 self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
@@ -666,9 +664,25 @@ fn handle_ret(entry: &OpcodeEntry) -> TokenStream {
             quote! {}
         };
         quote! {
-            #base
+            #pop
             #enable_interrupts
             #cycles
         }
     }
+}
+
+fn pop_stack(dest: &str) -> TokenStream {
+    let reg = dest.to_lowercase();
+    let setter = format_ident!("set_{}", reg);
+
+    quote! {
+        let ret = self.mmu.read_word(self.cpu.registers.sp());
+        self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_add(2));
+        self.cpu.registers.#setter(ret);
+    }
+}
+
+fn handle_pop(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "POP");
+    pop_stack(&entry.operands[0].name)
 }
