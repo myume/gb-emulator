@@ -64,7 +64,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
         let epilogue =
             // These instructions alter the PC and can take multiple possible cycles
             // so handle them individually
-            if ["JP", "JR", "CALL", "RET", "RETI", "RST"].contains(&entry.mnemonic.as_str()) {
+            if ["JP", "JR", "CALL", "RET", "RETI", "RST"].contains(&entry.mnemonic.as_str()) || entry.mnemonic == "PREFIX" {
                 quote! {}
             } else {
                 let cycles = entry.cycles[0];
@@ -122,6 +122,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "RRA" => handle_rra(entry),
         "JP" => handle_jump(entry),
         "JR" => handle_jump(entry),
+        "CPL" => handle_cpl(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -570,3 +571,18 @@ fn handle_jump(entry: &OpcodeEntry) -> TokenStream {
         _ => unreachable!(),
     }
 }
+
+fn handle_cpl(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "CPL");
+
+    quote! {
+        self.cpu.alu_cpl();
+    }
+}
+
+// fn handle_daa(entry: &OpcodeEntry) -> TokenStream {}
+// fn handle_scf(entry: &OpcodeEntry) -> TokenStream {}
+//
+// fn handle_ccf(entry: &OpcodeEntry) -> TokenStream {}
+//
+// fn handle_halt(entry: &OpcodeEntry) -> TokenStream {}

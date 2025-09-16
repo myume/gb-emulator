@@ -149,6 +149,14 @@ impl CPU {
         self.registers.set_flag(CpuFlags::H, false);
         self.registers.set_flag(CpuFlags::C, a & 0b0000_0001 == 1);
     }
+
+    pub fn alu_cpl(&mut self) {
+        let a = self.registers.a();
+        self.registers.set_a(!a);
+
+        self.registers.set_flag(CpuFlags::N, true);
+        self.registers.set_flag(CpuFlags::H, true);
+    }
 }
 
 pub struct Registers {
@@ -400,5 +408,17 @@ mod test {
         cpu.alu_rra();
         assert!(!cpu.registers.get_flag(CpuFlags::C));
         assert_eq!(cpu.registers.a(), 0b1000_0000);
+    }
+
+    #[test]
+    fn test_cpl() {
+        let mut cpu = CPU::new();
+
+        cpu.registers.set_a(0b1010_0101);
+        cpu.alu_cpl();
+
+        assert!(cpu.registers.get_flag(CpuFlags::N));
+        assert!(cpu.registers.get_flag(CpuFlags::H));
+        assert_eq!(cpu.registers.a(), 0b0101_1010);
     }
 }
