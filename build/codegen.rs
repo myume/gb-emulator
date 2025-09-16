@@ -544,7 +544,7 @@ fn handle_jump(entry: &OpcodeEntry) -> TokenStream {
         }
         2 => {
             // jump to address on condition
-            let conds = &entry.operands[0].name;
+            let cond = &entry.operands[0].name;
             let taken_cycles = entry.cycles[0];
             let untaken_cycles = entry.cycles[1];
 
@@ -562,9 +562,20 @@ fn handle_jump(entry: &OpcodeEntry) -> TokenStream {
                 }
             };
 
+            let condition = if cond.len() == 2 {
+                assert!(cond.starts_with("N"));
+                let (_, cond) = cond.split_at(1);
+                quote! {
+                    !self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
+                }
+            } else {
+                quote! {
+                    self.cpu.registers.get_flag(CpuFlags::from_str(#cond).expect("invalid condition"))
+                }
+            };
+
             quote! {
-                let condition = #conds.chars().map(|c| CpuFlags::from_str(&c.to_string()).expect("Invalid flag in condition")).all(|flag| self.cpu.registers.get_flag(flag));
-                if condition {
+                if #condition {
                     #load_and_jump
                     #taken_cycles
                 } else {
@@ -624,7 +635,7 @@ fn handle_ret(entry: &OpcodeEntry) -> TokenStream {
         let untaken_cycles = entry.cycles[1];
         let bytes = entry.bytes;
 
-        let condition = if cond.len() > 1 {
+        let condition = if cond.len() == 2 {
             assert!(cond.starts_with("N"));
             let (_, cond) = cond.split_at(1);
             quote! {
