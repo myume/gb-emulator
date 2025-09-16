@@ -131,6 +131,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "POP" => handle_pop(entry),
         "PUSH" => handle_push(entry),
         "CALL" => handle_call(entry),
+        "RST" => handle_rst(entry),
         _ => quote! {
             unreachable!("Unhandled Instruction");
         },
@@ -737,5 +738,20 @@ fn handle_call(entry: &OpcodeEntry) -> TokenStream {
     }
 }
 
-// fn handle_rst(entry: &OpcodeEntry) -> TokenStream {}
+fn handle_rst(entry: &OpcodeEntry) -> TokenStream {
+    let push_pc = push_stack("pc");
+    let bytes = entry.bytes;
+    let cycles = entry.cycles[0];
+
+    let vec = LitInt::new(
+        &entry.operands[0].name.replace("$", "0x"),
+        Span::call_site(),
+    );
+    quote! {
+        self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+        #push_pc
+        self.cpu.registers.set_pc(#vec);
+        #cycles
+    }
+}
 // fn handle_ldh(entry: &OpcodeEntry) -> TokenStream {}
