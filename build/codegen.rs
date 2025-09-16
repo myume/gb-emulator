@@ -129,6 +129,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "RET" => handle_ret(entry),
         "RETI" => handle_ret(entry),
         "POP" => handle_pop(entry),
+        "PUSH" => handle_push(entry),
         _ => quote! {
             unreachable!("Unhandled Instruction");
         },
@@ -682,7 +683,26 @@ fn pop_stack(dest: &str) -> TokenStream {
     }
 }
 
+fn push_stack(src: &str) -> TokenStream {
+    let reg = src.to_lowercase();
+    let getter = format_ident!("{}", reg);
+
+    quote! {
+        self.mmu.write_word(self.cpu.registers.sp(), self.cpu.registers.#getter());
+        self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_sub(2));
+    }
+}
+
 fn handle_pop(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "POP");
     pop_stack(&entry.operands[0].name)
 }
+
+fn handle_push(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "PUSH");
+    push_stack(&entry.operands[0].name)
+}
+
+// fn handle_call(entry: &OpcodeEntry) -> TokenStream {}
+// fn handle_rst(entry: &OpcodeEntry) -> TokenStream {}
+// fn handle_ldh(entry: &OpcodeEntry) -> TokenStream {}
