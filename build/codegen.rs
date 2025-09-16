@@ -124,6 +124,7 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "JR" => handle_jump(entry),
         "CPL" => handle_cpl(entry),
         "SCF" => handle_scf(entry),
+        "CCF" => handle_ccf(entry),
         _ => quote! {
             todo!("Unhandled Instruction");
         },
@@ -590,8 +591,13 @@ fn handle_scf(entry: &OpcodeEntry) -> TokenStream {
     }
 }
 
+fn handle_ccf(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "CCF");
+    quote! {
+        self.cpu.registers.set_flag(CpuFlags::N, false);
+        self.cpu.registers.set_flag(CpuFlags::H, false);
+        self.cpu.registers.set_flag(CpuFlags::C, !self.cpu.registers.get_flag(CpuFlags::C));
+    }
+}
+
 // fn handle_daa(entry: &OpcodeEntry) -> TokenStream {}
-//
-// fn handle_ccf(entry: &OpcodeEntry) -> TokenStream {}
-//
-// fn handle_halt(entry: &OpcodeEntry) -> TokenStream {}
