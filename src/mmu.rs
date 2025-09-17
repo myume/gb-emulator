@@ -1,10 +1,26 @@
 use crate::utils::compose_bytes;
 
-pub struct MMU {}
+static WRAM_SIZE: usize = 0xE000 - 0xC000;
+static HRAM_SIZE: usize = 0xFFFF - 0xFF80;
+static OAM_SIZE: usize = 0xFEA0 - 0xFE00;
+
+pub struct MMU {
+    wram: [u8; WRAM_SIZE],
+    oam: [u8; OAM_SIZE],
+    hram: [u8; HRAM_SIZE],
+    pub interrupt_enable: u8,
+    pub interrupt_flag: u8,
+}
 
 impl MMU {
     pub fn new() -> Self {
-        MMU {}
+        MMU {
+            wram: [0; WRAM_SIZE],
+            oam: [0; OAM_SIZE],
+            hram: [0; HRAM_SIZE],
+            interrupt_enable: 0,
+            interrupt_flag: 0,
+        }
     }
 
     pub fn read_byte(&self, address: u16) -> u8 {
@@ -22,33 +38,27 @@ impl MMU {
                 todo!()
             }
             // WRAM
-            0xC000..=0xDFFF => {
-                todo!()
-            }
+            0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize],
             // Echo RAM (prohibited)
             0xE000..=0xFDFF => {
                 todo!()
             }
             // OAM (Object attribute memory)
-            0xFE00..=0xFE9F => {
-                todo!()
-            }
+            0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize],
             // Not usable
             0xFEA0..=0xFEFF => {
                 todo!()
             }
+            // Interrupt flag (IF)
+            0xFF0F => self.interrupt_flag,
             // I/O Registers
             0xFF00..=0xFF7F => {
                 todo!()
             }
             // HRAM (high RAM)
-            0xFF80..=0xFFFE => {
-                todo!()
-            }
+            0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize],
             // Interrupt Enable register (IE)
-            0xFFFF => {
-                todo!()
-            }
+            0xFFFF => self.interrupt_enable,
         }
     }
 
@@ -58,7 +68,7 @@ impl MMU {
         compose_bytes(high, low)
     }
 
-    pub fn write_byte(&self, address: u16, value: u8) {
+    pub fn write_byte(&mut self, address: u16, value: u8) {
         match address {
             // cartridge
             0x0000..=0x7FFF => {
@@ -73,37 +83,31 @@ impl MMU {
                 todo!()
             }
             // WRAM
-            0xC000..=0xDFFF => {
-                todo!()
-            }
+            0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize] = value,
             // Echo RAM (prohibited)
             0xE000..=0xFDFF => {
                 todo!()
             }
             // OAM (Object attribute memory)
-            0xFE00..=0xFE9F => {
-                todo!()
-            }
+            0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize] = value,
             // Not usable
             0xFEA0..=0xFEFF => {
                 todo!()
             }
+            // Interrupt flag (IF)
+            0xFF0F => self.interrupt_flag = value,
             // I/O Registers
             0xFF00..=0xFF7F => {
                 todo!()
             }
             // HRAM (high RAM)
-            0xFF80..=0xFFFE => {
-                todo!()
-            }
+            0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize] = value,
             // Interrupt Enable register (IE)
-            0xFFFF => {
-                todo!()
-            }
+            0xFFFF => self.interrupt_enable = value,
         }
     }
 
-    pub fn write_word(&self, address: u16, value: u16) {
+    pub fn write_word(&mut self, address: u16, value: u16) {
         let low = value | 0x00FF;
         let high = value | 0xFF00;
         self.write_byte(address, low as u8);
