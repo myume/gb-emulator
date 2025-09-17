@@ -132,6 +132,8 @@ fn generate_opcode_body(entry: &OpcodeEntry, opcode: &str) -> TokenStream {
         "CALL" => handle_call(entry),
         "RST" => handle_rst(entry),
         "LDH" => handle_ldh(entry),
+        "EI" => handle_ei(entry),
+        "DI" => handle_di(entry),
         _ => {
             let err_message = format!("Unhandled instruction {}", opcode);
             quote! {
@@ -812,5 +814,18 @@ fn handle_ldh(entry: &OpcodeEntry) -> TokenStream {
     quote! {
         #load
         #store
+    }
+}
+
+fn handle_di(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "DI");
+    quote! {
+        self.cpu.set_ime(false);
+    }
+}
+fn handle_ei(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "EI");
+    quote! {
+        self.cpu.set_ime(true);
     }
 }
