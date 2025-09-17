@@ -87,7 +87,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
     });
 
     let instructions = quote! {
-        #[allow(unused_doc_comments,unreachable_code)]
+        #[allow(unused_doc_comments)]
         impl GameBoy {
             pub fn execute_opcode(&mut self, opcode: u8) -> Cycles {
                 match opcode {
@@ -104,6 +104,8 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
 fn generate_opcode_body(entry: &OpcodeEntry, opcode: &str) -> TokenStream {
     match entry.mnemonic.as_str() {
         "NOP" => quote! {},
+        "STOP" => quote! {},
+        "HALT" => handle_halt(entry),
         "LD" => handle_load_instruction(entry),
         "INC" => handle_inc_dec_instruction(entry),
         "DEC" => handle_inc_dec_instruction(entry),
@@ -823,9 +825,19 @@ fn handle_di(entry: &OpcodeEntry) -> TokenStream {
         self.cpu.set_ime(false);
     }
 }
+
 fn handle_ei(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "EI");
     quote! {
         self.cpu.set_ime(true);
     }
 }
+
+fn handle_halt(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "HALT");
+    quote! {
+        self.cpu.halted = true;
+    }
+}
+
+// prefix

@@ -5,6 +5,7 @@ pub type Cycles = usize;
 pub struct CPU {
     pub registers: Registers,
     ime: bool, // ime flag
+    pub halted: bool,
 }
 
 impl CPU {
@@ -12,6 +13,7 @@ impl CPU {
         CPU {
             registers: Registers::new(),
             ime: false,
+            halted: false,
         }
     }
 
