@@ -75,7 +75,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
                 }
             };
 
-        let body = generate_opcode_body(&entry);
+        let body = generate_opcode_body(&entry, opcode);
 
         quote! {
             #[doc = #full_instruction]
@@ -92,7 +92,6 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
             pub fn execute_opcode(&mut self, opcode: u8) -> Cycles {
                 match opcode {
                     #(#match_arms,)*
-                    // _ => unreachable!("Encountered illegal opcode"),
                 }
             }
         }
@@ -102,7 +101,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
     prettyplease::unparse(&ast)
 }
 
-fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
+fn generate_opcode_body(entry: &OpcodeEntry, opcode: &str) -> TokenStream {
     match entry.mnemonic.as_str() {
         "NOP" => quote! {},
         "LD" => handle_load_instruction(entry),
@@ -132,9 +131,13 @@ fn generate_opcode_body(entry: &OpcodeEntry) -> TokenStream {
         "PUSH" => handle_push(entry),
         "CALL" => handle_call(entry),
         "RST" => handle_rst(entry),
-        _ => quote! {
-            unreachable!("Unhandled Instruction");
-        },
+        "LDH" => handle_ldh(entry),
+        _ => {
+            let err_message = format!("Unhandled instruction {}", opcode);
+            quote! {
+                panic!(#err_message);
+            }
+        }
     }
 }
 
@@ -739,6 +742,7 @@ fn handle_call(entry: &OpcodeEntry) -> TokenStream {
 }
 
 fn handle_rst(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "RST");
     let push_pc = push_stack("pc");
     let bytes = entry.bytes;
     let cycles = entry.cycles[0];
@@ -754,4 +758,59 @@ fn handle_rst(entry: &OpcodeEntry) -> TokenStream {
         #cycles
     }
 }
-// fn handle_ldh(entry: &OpcodeEntry) -> TokenStream {}
+
+fn handle_ldh(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "LDH");
+    assert_eq!(entry.operands.len(), 2);
+
+    let dest = &entry.operands[0];
+    let src = &entry.operands[1];
+
+    let loaded_val = format_ident!("val");
+    let load = if is_register(&src.name) && src.immediate {
+        assert!(src.name.to_lowercase() == "a");
+        quote! {
+            let #loaded_val = self.cpu.registers.a();
+        }
+    } else if is_register(&src.name) && !src.immediate {
+        assert!(src.name.to_lowercase() == "c");
+
+        quote! {
+            let address = 0xFF00 + self.cpu.registers.c() as u16;
+            let #loaded_val = self.mmu.read_byte(address);
+        }
+    } else {
+        assert!(!is_register(&src.name) && !src.immediate);
+        quote! {
+            let offset = self.mmu.read_byte(self.cpu.registers.pc().wrapping_add(1));
+            let address = 0xFF00 + offset as u16;
+            let #loaded_val = self.mmu.read_byte(address);
+        }
+    };
+
+    let store = if is_register(&dest.name) && dest.immediate {
+        assert_eq!(dest.name.to_lowercase(), "a");
+
+        quote! {
+            self.cpu.registers.set_a(#loaded_val);
+        }
+    } else if is_register(&dest.name) && !dest.immediate {
+        assert_eq!(dest.name.to_lowercase(), "c");
+
+        quote! {
+            self.mmu.write_byte(0xFF00 + self.cpu.registers.c() as u16, #loaded_val);
+        }
+    } else {
+        assert!(!is_register(&dest.name) && !dest.immediate);
+
+        quote! {
+            let offset = self.mmu.read_byte(self.cpu.registers.pc().wrapping_add(1));
+            self.mmu.write_byte(0xFF00 + offset as u16, #loaded_val);
+        }
+    };
+
+    quote! {
+        #load
+        #store
+    }
+}
