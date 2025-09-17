@@ -5,6 +5,8 @@ static HRAM_SIZE: usize = 0xFFFF - 0xFF80;
 static OAM_SIZE: usize = 0xFEA0 - 0xFE00;
 
 pub struct MMU {
+    stub_ram: [u8; 0xFFFF], // TODO: remove after everything is implemented
+
     wram: [u8; WRAM_SIZE],
     oam: [u8; OAM_SIZE],
     hram: [u8; HRAM_SIZE],
@@ -15,6 +17,8 @@ pub struct MMU {
 impl MMU {
     pub fn new() -> Self {
         MMU {
+            stub_ram: [0; 0xFFFF],
+
             wram: [0; WRAM_SIZE],
             oam: [0; OAM_SIZE],
             hram: [0; HRAM_SIZE],
@@ -26,35 +30,23 @@ impl MMU {
     pub fn read_byte(&self, address: u16) -> u8 {
         match address {
             // cartridge
-            0x0000..=0x7FFF => {
-                todo!()
-            }
+            0x0000..=0x7FFF => self.stub_ram[address as usize],
             // VRAM
-            0x8000..=0x9FFF => {
-                todo!()
-            }
+            0x8000..=0x9FFF => self.stub_ram[address as usize],
             // External RAM (from cartridge)
-            0xA000..=0xBFFF => {
-                todo!()
-            }
+            0xA000..=0xBFFF => self.stub_ram[address as usize],
             // WRAM
             0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize],
             // Echo RAM (prohibited)
-            0xE000..=0xFDFF => {
-                todo!()
-            }
+            0xE000..=0xFDFF => self.stub_ram[address as usize],
             // OAM (Object attribute memory)
             0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize],
             // Not usable
-            0xFEA0..=0xFEFF => {
-                todo!()
-            }
+            0xFEA0..=0xFEFF => self.stub_ram[address as usize],
             // Interrupt flag (IF)
             0xFF0F => self.interrupt_flag,
             // I/O Registers
-            0xFF00..=0xFF7F => {
-                todo!()
-            }
+            0xFF00..=0xFF7F => self.stub_ram[address as usize],
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize],
             // Interrupt Enable register (IE)
@@ -71,35 +63,23 @@ impl MMU {
     pub fn write_byte(&mut self, address: u16, value: u8) {
         match address {
             // cartridge
-            0x0000..=0x7FFF => {
-                todo!()
-            }
+            0x0000..=0x7FFF => self.stub_ram[address as usize] = value,
             // VRAM
-            0x8000..=0x9FFF => {
-                todo!()
-            }
+            0x8000..=0x9FFF => self.stub_ram[address as usize] = value,
             // External RAM (from cartridge)
-            0xA000..=0xBFFF => {
-                todo!()
-            }
+            0xA000..=0xBFFF => self.stub_ram[address as usize] = value,
             // WRAM
             0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize] = value,
             // Echo RAM (prohibited)
-            0xE000..=0xFDFF => {
-                todo!()
-            }
+            0xE000..=0xFDFF => self.stub_ram[address as usize] = value,
             // OAM (Object attribute memory)
             0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize] = value,
             // Not usable
-            0xFEA0..=0xFEFF => {
-                todo!()
-            }
+            0xFEA0..=0xFEFF => self.stub_ram[address as usize] = value,
             // Interrupt flag (IF)
             0xFF0F => self.interrupt_flag = value,
             // I/O Registers
-            0xFF00..=0xFF7F => {
-                todo!()
-            }
+            0xFF00..=0xFF7F => self.stub_ram[address as usize] = value,
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize] = value,
             // Interrupt Enable register (IE)
