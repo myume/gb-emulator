@@ -1,4 +1,4 @@
-use crate::{cpu::CPU, memory::MMU};
+use crate::{cpu::CPU, mmu::MMU};
 
 pub struct GameBoy {
     pub cpu: CPU,

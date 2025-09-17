@@ -1,3 +1,4 @@
+use crate::utils::compose_bytes;
 use paste::paste;
 
 pub type Cycles = usize;
@@ -271,10 +272,6 @@ impl Registers {
             false => self.f &= !mask,
         }
     }
-
-    fn combine_registers(r1: u8, r2: u8) -> u16 {
-        ((r1 as u16) << 8) | r2 as u16
-    }
 }
 
 macro_rules! create_base_registers {
@@ -301,7 +298,7 @@ macro_rules! create_combined_registers {
                 paste! {
                     $(
                         pub fn [<$r1 $r2>](&self) -> u16 {
-                            Registers::combine_registers(self.$r1, self.$r2)
+                            compose_bytes(self.$r1, self.$r2)
                         }
 
                         pub fn [<set_ $r1 $r2>](&mut self, value: u16) {
