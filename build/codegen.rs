@@ -929,22 +929,28 @@ fn handle_cb(entry: &OpcodeEntry) -> TokenStream {
 
 fn generate_cb_body(entry: &OpcodeEntry) -> TokenStream {
     match entry.mnemonic.as_str() {
-        "RLC" => handle_rotate(entry),
-        "RRC" => handle_rotate(entry),
-        "RL" => handle_rotate(entry),
-        "RR" => handle_rotate(entry),
+        "RLC" => handle_alu_op(entry),
+        "RRC" => handle_alu_op(entry),
+        "RL" => handle_alu_op(entry),
+        "RR" => handle_alu_op(entry),
+        "SLA" => handle_alu_op(entry),
+        "SRA" => handle_alu_op(entry),
+        "SRL" => handle_alu_op(entry),
         _ => quote! {
             panic!("Unhandled instruction");
         },
     }
 }
 
-fn handle_rotate(entry: &OpcodeEntry) -> TokenStream {
+fn handle_alu_op(entry: &OpcodeEntry) -> TokenStream {
     assert!(
         entry.mnemonic == "RLC"
             || entry.mnemonic == "RL"
             || entry.mnemonic == "RRC"
             || entry.mnemonic == "RR"
+            || entry.mnemonic == "SLA"
+            || entry.mnemonic == "SRA"
+            || entry.mnemonic == "SRL"
     );
 
     let op = format_ident!("alu_{}", entry.mnemonic.to_lowercase());

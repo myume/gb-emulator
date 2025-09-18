@@ -119,6 +119,33 @@ impl CPU {
         result
     }
 
+    pub fn alu_sla(&mut self, val: u8) -> u8 {
+        let result = val << 1;
+        self.registers.set_flag(CpuFlags::Z, result == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, val >= 0b1000_0000);
+        result
+    }
+
+    pub fn alu_srl(&mut self, val: u8) -> u8 {
+        let result = val >> 1;
+        self.registers.set_flag(CpuFlags::Z, result == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, val & 0b0000_0001 == 1);
+        result
+    }
+
+    pub fn alu_sra(&mut self, val: u8) -> u8 {
+        let result = val as i8 >> 1;
+        self.registers.set_flag(CpuFlags::Z, result == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, val & 0b0000_0001 == 1);
+        result as u8
+    }
+
     pub fn alu_rlca(&mut self) {
         let result = self.alu_rlc(self.registers.a());
         self.registers.set_a(result);
@@ -485,5 +512,45 @@ mod test {
         assert!(cpu.registers.get_flag(CpuFlags::N));
         assert!(cpu.registers.get_flag(CpuFlags::H));
         assert_eq!(cpu.registers.a(), 0b0101_1010);
+    }
+
+    #[test]
+    fn test_sla() {
+        let mut cpu = CPU::new();
+
+        let result = cpu.alu_sla(0b0000_0001);
+
+        assert!(!cpu.registers.get_flag(CpuFlags::C));
+        assert_eq!(result, 0b0000_0010);
+
+        let result = cpu.alu_sla(0b1000_0001);
+        assert!(cpu.registers.get_flag(CpuFlags::C));
+        assert_eq!(result, 0b0000_0010);
+    }
+
+    #[test]
+    fn test_sra() {
+        let mut cpu = CPU::new();
+
+        let result = cpu.alu_sra(0b0000_0001);
+        assert!(cpu.registers.get_flag(CpuFlags::C));
+        assert_eq!(result, 0b0000_0000);
+
+        let result = cpu.alu_sra(0b1000_0000);
+        assert!(!cpu.registers.get_flag(CpuFlags::C));
+        assert_eq!(result, 0b1100_0000);
+    }
+
+    #[test]
+    fn test_srl() {
+        let mut cpu = CPU::new();
+
+        let result = cpu.alu_srl(0b0000_0001);
+        assert!(cpu.registers.get_flag(CpuFlags::C));
+        assert_eq!(result, 0b0000_0000);
+
+        let result = cpu.alu_srl(0b1000_0000);
+        assert!(!cpu.registers.get_flag(CpuFlags::C));
+        assert_eq!(result, 0b0100_0000);
     }
 }
