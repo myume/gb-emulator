@@ -92,12 +92,53 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
         }
     });
 
+    let cb_match_arms = opcode_table.cbprefixed.iter().map(|(opcode, entry)| {
+        let full_instruction = format!(
+            " {} {}",
+            entry.mnemonic.clone(),
+            entry
+                .operands
+                .iter()
+                .map(|operand| if operand.immediate {
+                    operand.name.clone()
+                } else {
+                    format!("[{}]", operand.name)
+                })
+                .collect::<Vec<String>>()
+                .join(",")
+        );
+        let hex_literal = LitInt::new(opcode, Span::call_site());
+        let cycles = entry.cycles[0];
+        let bytes = entry.bytes;
+
+        let body = generate_cb_body(&entry);
+
+        let epilogue = quote! {
+            self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+            #cycles
+        };
+
+        quote! {
+            #[doc = #full_instruction]
+            #hex_literal => {
+                #body
+                #epilogue
+            }
+        }
+    });
+
     let instructions = quote! {
-        #[allow(unused_doc_comments)]
+        #[allow(unused_doc_comments,unreachable_code)]
         impl GameBoy {
             pub fn execute_opcode(&mut self, opcode: u8) -> Cycles {
                 match opcode {
                     #(#match_arms,)*
+                }
+            }
+
+            pub fn execute_cb_opcode(&mut self, opcode: u8) -> Cycles {
+                match opcode {
+                    #(#cb_match_arms,)*
                 }
             }
         }
@@ -142,6 +183,7 @@ fn generate_opcode_body(entry: &OpcodeEntry, opcode: &str) -> TokenStream {
         "LDH" => handle_ldh(entry),
         "EI" => handle_ei(entry),
         "DI" => handle_di(entry),
+        "PREFIX" => handle_cb(entry),
         _ => {
             let err_message = format!("Unhandled instruction {}", opcode);
             quote! {
@@ -873,4 +915,22 @@ fn handle_halt(entry: &OpcodeEntry) -> TokenStream {
     }
 }
 
-// prefix
+// CB prefix
+fn handle_cb(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "PREFIX");
+    let bytes = entry.bytes;
+    let cycles = entry.cycles[0];
+    quote! {
+        self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
+        let opcode = self.mmu.read_byte(self.cpu.registers.pc());
+        #cycles + self.execute_cb_opcode(opcode)
+    }
+}
+
+fn generate_cb_body(entry: &OpcodeEntry) -> TokenStream {
+    match entry.mnemonic.as_str() {
+        _ => quote! {
+            panic!("Unhandled instruction");
+        },
+    }
+}
