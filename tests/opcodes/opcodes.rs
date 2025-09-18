@@ -32,6 +32,7 @@ pub struct GBState {
     l: u8,
     ime: u8,
     ei: Option<u8>,
+    ie: Option<u8>,
     ram: Vec<(u16, u8)>,
 }
 
@@ -78,7 +79,6 @@ fn initialize_test(initial: &GBState) -> GameBoy {
     cpu.set_ime(initial.ime > 0);
 
     let mut mmu = MMU::new();
-    mmu.interrupt_enable = initial.ei.unwrap_or(0x00);
 
     initial
         .ram
@@ -116,10 +116,11 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
         )));
     }
 
-    if gb.mmu.interrupt_enable as u8 != expected.ei.unwrap_or(0x00) {
+    if gb.cpu.ei != expected.ei.unwrap_or(0x00) {
         return Err(Failed::from(format!(
-            "Expected ei to be 0x{:X} found 0x{:X?}",
-            gb.mmu.interrupt_enable as u8, expected.ei
+            "Expected ei to be 0x{:X} found 0x{:X}",
+            expected.ei.unwrap_or(0x00),
+            gb.cpu.ei
         )));
     }
 

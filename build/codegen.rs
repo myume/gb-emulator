@@ -193,7 +193,9 @@ fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
             self.cpu.registers.set_flag(CpuFlags::N, false);
             self.cpu.registers.set_flag(CpuFlags::H, (val & 0x0F) + 1 > 0x0F);
         }
-    } else if entry.mnemonic == "DEC" {
+    } else if entry.mnemonic == "DEC"
+        && !(is_register(&operand.name) && operand.immediate && operand.name.len() == 2)
+    {
         quote! {
             self.cpu.registers.set_flag(CpuFlags::Z, self.cpu.registers.#getter() == 0);
             self.cpu.registers.set_flag(CpuFlags::N, true);
@@ -860,7 +862,8 @@ fn handle_di(entry: &OpcodeEntry) -> TokenStream {
 fn handle_ei(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "EI");
     quote! {
-        self.cpu.set_ime(true);
+        // self.cpu.set_ime(true);
+        self.cpu.ei = 1;
     }
 }
 
