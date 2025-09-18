@@ -17,6 +17,7 @@ struct Operand {
     name: String,
     immediate: bool,
     increment: Option<bool>,
+    decrement: Option<bool>,
     bytes: Option<u16>,
 }
 
@@ -309,21 +310,35 @@ fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
         }
     };
 
-    let increment = {
-        if Some(true) == dest.increment && dest.name.to_lowercase() == "hl" {
+    let crement = {
+        if (Some(true) == dest.increment || Some(true) == dest.decrement)
+            && dest.name.to_lowercase() == "hl"
+        {
             let setter = format_ident!("set_{}", dest.name.to_lowercase());
             let getter = format_ident!("{}", dest.name.to_lowercase());
+            let op = if Some(true) == dest.increment {
+                format_ident!("wrapping_add")
+            } else {
+                format_ident!("wrapping_sub")
+            };
             quote! {
                 self.cpu.registers.#setter(
-                    self.cpu.registers.#getter().wrapping_add(1)
+                    self.cpu.registers.#getter().#op(1)
                 );
             }
-        } else if Some(true) == src.increment && src.name.to_lowercase() == "hl" {
+        } else if (Some(true) == src.increment || Some(true) == src.decrement)
+            && src.name.to_lowercase() == "hl"
+        {
             let setter = format_ident!("set_{}", src.name.to_lowercase());
             let getter = format_ident!("{}", src.name.to_lowercase());
+            let op = if Some(true) == src.increment {
+                format_ident!("wrapping_add")
+            } else {
+                format_ident!("wrapping_sub")
+            };
             quote! {
                 self.cpu.registers.#setter(
-                    self.cpu.registers.#getter().wrapping_add(1)
+                    self.cpu.registers.#getter().#op(1)
                 );
             }
         } else {
@@ -334,7 +349,7 @@ fn handle_load_instruction(entry: &OpcodeEntry) -> TokenStream {
     quote! {
         #load
         #store
-        #increment
+        #crement
     }
 }
 
