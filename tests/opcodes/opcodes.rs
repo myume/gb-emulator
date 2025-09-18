@@ -50,8 +50,8 @@ fn main() -> ExitCode {
             let json_tests: Vec<TestCase> =
                 serde_json::from_reader(reader).expect("Invalid Test Structure");
 
-            vec![json_tests[0].clone()]
-            // json_tests
+            // vec![json_tests[0].clone()]
+            json_tests
         })
         .map(|json_tests| {
             json_tests

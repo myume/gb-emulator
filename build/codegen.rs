@@ -167,21 +167,21 @@ fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
     let load = if operand.immediate {
         quote! {
             let val = self.cpu.registers.#getter();
+            let result = val.#op(1);
         }
     } else {
         quote! {
             let val = self.mmu.read_byte(self.cpu.registers.#getter());
+            let result = val.#op(1);
         }
     };
     let store = if operand.immediate {
         quote! {
-            self.cpu.registers.#setter(
-                val.#op(1)
-            );
+            self.cpu.registers.#setter(result);
         }
     } else {
         quote! {
-            self.mmu.write_byte(self.cpu.registers.#getter(), val.#op(1));
+            self.mmu.write_byte(self.cpu.registers.#getter(), result);
         }
     };
 
@@ -189,14 +189,14 @@ fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
         && (reg.len() != 2 || (reg == "hl" && !operand.immediate))
     {
         quote! {
-            self.cpu.registers.set_flag(CpuFlags::Z, self.cpu.registers.#getter() == 0);
+            self.cpu.registers.set_flag(CpuFlags::Z, result == 0);
             self.cpu.registers.set_flag(CpuFlags::N, false);
             self.cpu.registers.set_flag(CpuFlags::H, (val & 0x0F) + 1 > 0x0F);
         }
     } else if entry.mnemonic == "DEC" && !(is_register(&reg) && operand.immediate && reg.len() == 2)
     {
         quote! {
-            self.cpu.registers.set_flag(CpuFlags::Z, self.cpu.registers.#getter() == 0);
+            self.cpu.registers.set_flag(CpuFlags::Z, result == 0);
             self.cpu.registers.set_flag(CpuFlags::N, true);
             self.cpu.registers.set_flag(CpuFlags::H, (val & 0x0F) == 0);
         }
