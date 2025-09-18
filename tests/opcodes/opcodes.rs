@@ -127,7 +127,7 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
         let actual = gb.mmu.read_byte(*address);
         if actual != *value {
             return Err(Failed::from(format!(
-                "Expected ram at address {:X} to be {:X} found {:X}",
+                "Expected ram at address 0x{:X} to be 0x{:X} found 0x{:X}",
                 address, value, actual
             )));
         }

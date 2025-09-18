@@ -288,6 +288,9 @@ macro_rules! create_base_registers {
 
                         pub fn [<set_ $r>](&mut self, value: $t) {
                             self.$r = value;
+                            if stringify!($r) == "f" {
+                                self.$r = self.$r & 0xF0; // lower 4 bits are always cleared
+                            }
                         }
                     )*
                 }
@@ -306,8 +309,8 @@ macro_rules! create_combined_registers {
 
                         pub fn [<set_ $r1 $r2>](&mut self, value: u16) {
                             let [lower, upper] = value.to_le_bytes();
-                            self.$r1 = upper;
-                            self.$r2 = lower;
+                            self.[<set_$r1>](upper);
+                            self.[<set_$r2>](lower);
                         }
                     )*
                 }
