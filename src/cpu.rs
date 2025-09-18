@@ -110,58 +110,70 @@ impl CPU {
         self.alu_sub_flags(rhs, false);
     }
 
-    pub fn alu_rlca(&mut self) {
-        let a = self.registers.a();
-        self.registers.set_a(a.rotate_left(1));
-
+    pub fn alu_rlc(&mut self, val: u8) -> u8 {
         self.registers.set_flag(CpuFlags::Z, false);
         self.registers.set_flag(CpuFlags::N, false);
         self.registers.set_flag(CpuFlags::H, false);
-        self.registers.set_flag(CpuFlags::C, a >= 0b1000_0000);
+        self.registers.set_flag(CpuFlags::C, val >= 0b1000_0000);
+
+        val.rotate_left(1)
     }
 
-    pub fn alu_rla(&mut self) {
-        let a = self.registers.a();
+    pub fn alu_rlca(&mut self) {
+        let result = self.alu_rlc(self.registers.a());
+        self.registers.set_a(result);
+    }
 
+    pub fn alu_rl(&mut self, val: u8) -> u8 {
         let c = if self.registers.get_flag(CpuFlags::C) {
             1
         } else {
             0
         };
 
-        self.registers.set_a((a << 1) + c);
-
         self.registers.set_flag(CpuFlags::Z, false);
         self.registers.set_flag(CpuFlags::N, false);
         self.registers.set_flag(CpuFlags::H, false);
-        self.registers.set_flag(CpuFlags::C, a >= 0b1000_0000);
+        self.registers.set_flag(CpuFlags::C, val >= 0b1000_0000);
+        (val << 1) + c
+    }
+
+    pub fn alu_rla(&mut self) {
+        let result = self.alu_rl(self.registers.a());
+        self.registers.set_a(result);
+    }
+
+    pub fn alu_rrc(&mut self, val: u8) -> u8 {
+        self.registers.set_flag(CpuFlags::Z, false);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, val & 0b0000_0001 == 1);
+        val.rotate_right(1)
     }
 
     pub fn alu_rrca(&mut self) {
-        let a = self.registers.a();
-        self.registers.set_a(a.rotate_right(1));
-
-        self.registers.set_flag(CpuFlags::Z, false);
-        self.registers.set_flag(CpuFlags::N, false);
-        self.registers.set_flag(CpuFlags::H, false);
-        self.registers.set_flag(CpuFlags::C, a & 0b0000_0001 == 1);
+        let result = self.alu_rrc(self.registers.a());
+        self.registers.set_a(result);
     }
 
-    pub fn alu_rra(&mut self) {
-        let a = self.registers.a();
-
+    pub fn alu_rr(&mut self, val: u8) -> u8 {
         let c = if self.registers.get_flag(CpuFlags::C) {
             0b1000_0000
         } else {
             0
         };
 
-        self.registers.set_a((a >> 1) | c);
-
         self.registers.set_flag(CpuFlags::Z, false);
         self.registers.set_flag(CpuFlags::N, false);
         self.registers.set_flag(CpuFlags::H, false);
-        self.registers.set_flag(CpuFlags::C, a & 0b0000_0001 == 1);
+        self.registers.set_flag(CpuFlags::C, val & 0b0000_0001 == 1);
+
+        (val >> 1) | c
+    }
+
+    pub fn alu_rra(&mut self) {
+        let result = self.alu_rr(self.registers.a());
+        self.registers.set_a(result);
     }
 
     pub fn alu_cpl(&mut self) {
