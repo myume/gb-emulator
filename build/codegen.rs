@@ -69,7 +69,12 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
                 quote! {}
             } else {
                 let cycles = entry.cycles[0];
-                let bytes = entry.bytes;
+                let mut bytes = entry.bytes;
+
+                if entry.mnemonic == "STOP" {
+                    bytes = 1;
+                }
+
                 quote! {
                     self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
                     #cycles
