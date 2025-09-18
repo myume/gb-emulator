@@ -186,15 +186,14 @@ fn handle_inc_dec_instruction(entry: &OpcodeEntry) -> TokenStream {
     };
 
     let flags = if entry.mnemonic == "INC"
-        && (!vec!["bc", "de", "sp"].contains(&reg.as_str()) || reg == "hl" && !operand.immediate)
+        && (reg.len() != 2 || (reg == "hl" && !operand.immediate))
     {
         quote! {
             self.cpu.registers.set_flag(CpuFlags::Z, self.cpu.registers.#getter() == 0);
             self.cpu.registers.set_flag(CpuFlags::N, false);
             self.cpu.registers.set_flag(CpuFlags::H, (val & 0x0F) + 1 > 0x0F);
         }
-    } else if entry.mnemonic == "DEC"
-        && !(is_register(&operand.name) && operand.immediate && operand.name.len() == 2)
+    } else if entry.mnemonic == "DEC" && !(is_register(&reg) && operand.immediate && reg.len() == 2)
     {
         quote! {
             self.cpu.registers.set_flag(CpuFlags::Z, self.cpu.registers.#getter() == 0);
