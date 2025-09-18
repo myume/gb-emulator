@@ -60,36 +60,36 @@ impl MMU {
         compose_bytes(high, low)
     }
 
-    pub fn write_byte(&mut self, address: u16, value: u8) {
+    pub fn write_byte(&mut self, address: u16, byte: u8) {
         match address {
             // cartridge
-            0x0000..=0x7FFF => self.stub_ram[address as usize] = value,
+            0x0000..=0x7FFF => self.stub_ram[address as usize] = byte,
             // VRAM
-            0x8000..=0x9FFF => self.stub_ram[address as usize] = value,
+            0x8000..=0x9FFF => self.stub_ram[address as usize] = byte,
             // External RAM (from cartridge)
-            0xA000..=0xBFFF => self.stub_ram[address as usize] = value,
+            0xA000..=0xBFFF => self.stub_ram[address as usize] = byte,
             // WRAM
-            0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize] = value,
+            0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize] = byte,
             // Echo RAM (prohibited)
-            0xE000..=0xFDFF => self.stub_ram[address as usize] = value,
+            0xE000..=0xFDFF => self.stub_ram[address as usize] = byte,
             // OAM (Object attribute memory)
-            0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize] = value,
+            0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize] = byte,
             // Not usable
-            0xFEA0..=0xFEFF => self.stub_ram[address as usize] = value,
+            0xFEA0..=0xFEFF => self.stub_ram[address as usize] = byte,
             // Interrupt flag (IF)
-            0xFF0F => self.interrupt_flag = value,
+            0xFF0F => self.interrupt_flag = byte,
             // I/O Registers
-            0xFF00..=0xFF7F => self.stub_ram[address as usize] = value,
+            0xFF00..=0xFF7F => self.stub_ram[address as usize] = byte,
             // HRAM (high RAM)
-            0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize] = value,
+            0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize] = byte,
             // Interrupt Enable register (IE)
-            0xFFFF => self.interrupt_enable = value,
+            0xFFFF => self.interrupt_enable = byte,
         }
     }
 
-    pub fn write_word(&mut self, address: u16, value: u16) {
-        let low = value & 0x00FF;
-        let high = value >> 8;
+    pub fn write_word(&mut self, address: u16, word: u16) {
+        let low = word & 0x00FF;
+        let high = word >> 8;
         self.write_byte(address, low as u8);
         self.write_byte(address.wrapping_add(1), high as u8);
     }
