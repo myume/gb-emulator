@@ -549,8 +549,14 @@ fn handle_jump(entry: &OpcodeEntry) -> TokenStream {
                     self.cpu.registers.pc().wrapping_add(1)
                 }
             };
-            let load = quote! {
-                let #loaded_val = self.mmu.#load_op(#reg);
+            let load = if is_register(&entry.operands[0].name) && entry.operands[0].immediate {
+                quote! {
+                    let #loaded_val = #reg;
+                }
+            } else {
+                quote! {
+                    let #loaded_val = self.mmu.#load_op(#reg);
+                }
             };
 
             let set = if relative {
