@@ -936,6 +936,7 @@ fn generate_cb_body(entry: &OpcodeEntry) -> TokenStream {
         "SLA" => handle_alu_op(entry),
         "SRA" => handle_alu_op(entry),
         "SRL" => handle_alu_op(entry),
+        "SWAP" => handle_alu_op(entry),
         _ => quote! {
             panic!("Unhandled instruction");
         },
@@ -951,6 +952,7 @@ fn handle_alu_op(entry: &OpcodeEntry) -> TokenStream {
             || entry.mnemonic == "SLA"
             || entry.mnemonic == "SRA"
             || entry.mnemonic == "SRL"
+            || entry.mnemonic == "SWAP"
     );
 
     let op = format_ident!("alu_{}", entry.mnemonic.to_lowercase());

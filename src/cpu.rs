@@ -250,6 +250,18 @@ impl CPU {
         self.registers.set_flag(CpuFlags::H, false);
         self.registers.set_flag(CpuFlags::C, adjustment >= 0x60);
     }
+
+    pub fn alu_swap(&mut self, val: u8) -> u8 {
+        let low = val & 0x0F;
+        let high = val >> 4;
+
+        let result = (low << 4) | high;
+        self.registers.set_flag(CpuFlags::Z, result == 0);
+        self.registers.set_flag(CpuFlags::N, false);
+        self.registers.set_flag(CpuFlags::H, false);
+        self.registers.set_flag(CpuFlags::C, false);
+        result
+    }
 }
 
 pub struct Registers {
@@ -552,5 +564,16 @@ mod test {
         let result = cpu.alu_srl(0b1000_0000);
         assert!(!cpu.registers.get_flag(CpuFlags::C));
         assert_eq!(result, 0b0100_0000);
+    }
+
+    #[test]
+    fn test_swap() {
+        let mut cpu = CPU::new();
+
+        let result = cpu.alu_swap(0b0000_0001);
+        assert_eq!(result, 0b0001_0000);
+
+        let result = cpu.alu_swap(0b1010_1001);
+        assert_eq!(result, 0b1001_1010);
     }
 }
