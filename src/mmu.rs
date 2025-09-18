@@ -88,8 +88,8 @@ impl MMU {
     }
 
     pub fn write_word(&mut self, address: u16, value: u16) {
-        let low = value | 0x00FF;
-        let high = value | 0xFF00;
+        let low = value & 0x00FF;
+        let high = value >> 8;
         self.write_byte(address, low as u8);
         self.write_byte(address.wrapping_add(1), high as u8);
     }

@@ -703,8 +703,13 @@ fn push_stack(src: &str) -> TokenStream {
     let getter = format_ident!("{}", reg);
 
     quote! {
-        self.mmu.write_word(self.cpu.registers.sp(), self.cpu.registers.#getter());
-        self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_sub(2));
+        let value = self.cpu.registers.#getter();
+        let low = value & 0x00FF;
+        let high = value >> 8;
+        self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_sub(1));
+        self.mmu.write_byte(self.cpu.registers.sp(), high as u8);
+        self.cpu.registers.set_sp(self.cpu.registers.sp().wrapping_sub(1));
+        self.mmu.write_byte(self.cpu.registers.sp(), low as u8);
     }
 }
 
