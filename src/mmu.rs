@@ -35,11 +35,11 @@ impl MMU {
     pub fn read_byte(&self, address: u16) -> u8 {
         match address {
             // cartridge
-            0x0000..=0x7FFF => self.stub_ram[address as usize],
+            0x0000..=0x7FFF => self.cartridge.mbc.read_byte(address),
             // VRAM
             0x8000..=0x9FFF => self.stub_ram[address as usize],
             // External RAM (from cartridge)
-            0xA000..=0xBFFF => self.stub_ram[address as usize],
+            0xA000..=0xBFFF => self.cartridge.mbc.read_byte(address),
             // WRAM
             0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize],
             // Echo RAM (prohibited)
@@ -68,11 +68,11 @@ impl MMU {
     pub fn write_byte(&mut self, address: u16, byte: u8) {
         match address {
             // cartridge
-            0x0000..=0x7FFF => self.stub_ram[address as usize] = byte,
+            0x0000..=0x7FFF => self.cartridge.mbc.write_byte(address, byte),
             // VRAM
             0x8000..=0x9FFF => self.stub_ram[address as usize] = byte,
             // External RAM (from cartridge)
-            0xA000..=0xBFFF => self.stub_ram[address as usize] = byte,
+            0xA000..=0xBFFF => self.cartridge.mbc.write_byte(address, byte),
             // WRAM
             0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize] = byte,
             // Echo RAM (prohibited)
