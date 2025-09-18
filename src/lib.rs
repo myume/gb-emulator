@@ -1,5 +1,5 @@
-mod cpu;
+pub mod cpu;
 pub mod gb;
 mod instructions;
-mod mmu;
+pub mod mmu;
 mod utils;

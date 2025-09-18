@@ -21,6 +21,9 @@ impl CPU {
     pub fn set_ime(&mut self, set: bool) {
         self.ime = set;
     }
+    pub fn get_ime(&self) -> bool {
+        self.ime
+    }
 
     pub fn alu_add(&mut self, rhs: u8, add_carry: bool) {
         let lhs = self.registers.a();

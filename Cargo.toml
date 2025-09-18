@@ -7,6 +7,11 @@ build = "build/build.rs"
 [dependencies]
 paste = "1.0.15"
 
+[dev-dependencies]
+libtest-mimic = "0.8.1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
+
 [build-dependencies]
 quote = "1.0.40"
 serde = { version = "1.0.219", features = ["derive"] }
@@ -14,3 +19,8 @@ serde_json = "1.0.143"
 prettyplease = "0.2.37"
 syn = "2.0.106"
 proc-macro2 = "1.0.101"
+
+[[test]]
+name = "opcodes_test"
+path = "tests/opcodes/opcodes.rs"
+harness = false
