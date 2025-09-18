@@ -2,13 +2,11 @@ use crate::{cartridge::Cartridge, ppu::PPU, utils::compose_bytes};
 
 static WRAM_SIZE: usize = 0xE000 - 0xC000;
 static HRAM_SIZE: usize = 0xFFFF - 0xFF80;
-static OAM_SIZE: usize = 0xFEA0 - 0xFE00;
 
 pub struct MMU {
     stub_ram: [u8; 0xFFFF], // TODO: remove after everything is implemented
 
     wram: [u8; WRAM_SIZE],
-    oam: [u8; OAM_SIZE],
     hram: [u8; HRAM_SIZE],
     pub interrupt_enable: u8,
     pub interrupt_flag: u8,
@@ -23,7 +21,6 @@ impl MMU {
             stub_ram: [0; 0xFFFF],
 
             wram: [0; WRAM_SIZE],
-            oam: [0; OAM_SIZE],
             hram: [0; HRAM_SIZE],
             interrupt_enable: 0,
             interrupt_flag: 0,
@@ -37,7 +34,7 @@ impl MMU {
             // cartridge
             0x0000..=0x7FFF => self.cartridge.mbc.read_byte(address),
             // VRAM
-            0x8000..=0x9FFF => self.stub_ram[address as usize],
+            0x8000..=0x9FFF => self.ppu.read_byte(address),
             // External RAM (from cartridge)
             0xA000..=0xBFFF => self.cartridge.mbc.read_byte(address),
             // WRAM
@@ -45,7 +42,7 @@ impl MMU {
             // Echo RAM (prohibited)
             0xE000..=0xFDFF => self.stub_ram[address as usize],
             // OAM (Object attribute memory)
-            0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize],
+            0xFE00..=0xFE9F => self.ppu.read_byte(address),
             // Not usable
             0xFEA0..=0xFEFF => self.stub_ram[address as usize],
             // Interrupt flag (IF)
@@ -70,7 +67,7 @@ impl MMU {
             // cartridge
             0x0000..=0x7FFF => self.cartridge.mbc.write_byte(address, byte),
             // VRAM
-            0x8000..=0x9FFF => self.stub_ram[address as usize] = byte,
+            0x8000..=0x9FFF => self.ppu.write_byte(address, byte),
             // External RAM (from cartridge)
             0xA000..=0xBFFF => self.cartridge.mbc.write_byte(address, byte),
             // WRAM
@@ -78,7 +75,7 @@ impl MMU {
             // Echo RAM (prohibited)
             0xE000..=0xFDFF => self.stub_ram[address as usize] = byte,
             // OAM (Object attribute memory)
-            0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize] = byte,
+            0xFE00..=0xFE9F => self.ppu.write_byte(address, byte),
             // Not usable
             0xFEA0..=0xFEFF => self.stub_ram[address as usize] = byte,
             // Interrupt flag (IF)
