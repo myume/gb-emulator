@@ -929,8 +929,55 @@ fn handle_cb(entry: &OpcodeEntry) -> TokenStream {
 
 fn generate_cb_body(entry: &OpcodeEntry) -> TokenStream {
     match entry.mnemonic.as_str() {
+        "RLC" => handle_rotate(entry),
+        "RRC" => handle_rotate(entry),
+        "RL" => handle_rotate(entry),
+        "RR" => handle_rotate(entry),
         _ => quote! {
             panic!("Unhandled instruction");
         },
+    }
+}
+
+fn handle_rotate(entry: &OpcodeEntry) -> TokenStream {
+    assert!(
+        entry.mnemonic == "RLC"
+            || entry.mnemonic == "RL"
+            || entry.mnemonic == "RRC"
+            || entry.mnemonic == "RR"
+    );
+
+    let op = format_ident!("alu_{}", entry.mnemonic.to_lowercase());
+
+    let reg = &entry.operands[0];
+    let reg_name = reg.name.to_lowercase();
+
+    assert!(is_register(&reg_name));
+
+    let getter = format_ident!("{}", reg_name);
+    let setter = format_ident!("set_{}", reg_name);
+    let load = if reg.immediate {
+        quote! {
+            let val = self.cpu.registers.#getter();
+        }
+    } else {
+        quote! {
+            let address = self.cpu.registers.#getter();
+            let val = self.mmu.read_byte(address);
+        }
+    };
+    let store = if reg.immediate {
+        quote! {
+            self.cpu.registers.#setter(val);
+        }
+    } else {
+        quote! {
+            self.mmu.write_byte(address, val);
+        }
+    };
+    quote! {
+        #load
+        let val = self.cpu.#op(val);
+        #store
     }
 }
