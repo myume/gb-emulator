@@ -937,9 +937,10 @@ fn generate_cb_body(entry: &OpcodeEntry) -> TokenStream {
         "SRA" => handle_alu_op(entry),
         "SRL" => handle_alu_op(entry),
         "SWAP" => handle_alu_op(entry),
-        _ => quote! {
-            panic!("Unhandled instruction");
-        },
+        "BIT" => handle_bit(entry),
+        "RES" => handle_res_set(entry),
+        "SET" => handle_res_set(entry),
+        _ => unreachable!("Unhandled instruction"),
     }
 }
 
@@ -986,6 +987,92 @@ fn handle_alu_op(entry: &OpcodeEntry) -> TokenStream {
     quote! {
         #load
         let val = self.cpu.#op(val);
+        #store
+    }
+}
+
+fn handle_bit(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "BIT");
+
+    let bit: u8 = entry.operands[0].name.parse().expect("valid bit number");
+
+    let mask: u8 = 1 << bit;
+
+    let reg = &entry.operands[1];
+    let reg_name = reg.name.to_lowercase();
+
+    assert!(is_register(&reg_name));
+
+    let getter = format_ident!("{}", reg_name);
+    let load = if reg.immediate {
+        quote! {
+            let val = self.cpu.registers.#getter();
+        }
+    } else {
+        quote! {
+            let address = self.cpu.registers.#getter();
+            let val = self.mmu.read_byte(address);
+        }
+    };
+
+    quote! {
+        #load
+        let set = val & #mask > 0;
+        if !set {
+            self.cpu.registers.set_flag(CpuFlags::Z, !set);
+            self.cpu.registers.set_flag(CpuFlags::N, false);
+            self.cpu.registers.set_flag(CpuFlags::H, true);
+        }
+    }
+}
+
+fn handle_res_set(entry: &OpcodeEntry) -> TokenStream {
+    assert!(entry.mnemonic == "RES" || entry.mnemonic == "SET");
+
+    let bit: u8 = entry.operands[0].name.parse().expect("valid bit number");
+
+    let reg = &entry.operands[1];
+    let reg_name = reg.name.to_lowercase();
+
+    assert!(is_register(&reg_name));
+
+    let getter = format_ident!("{}", reg_name);
+    let setter = format_ident!("set_{}", reg_name);
+    let load = if reg.immediate {
+        quote! {
+            let val = self.cpu.registers.#getter();
+        }
+    } else {
+        quote! {
+            let address = self.cpu.registers.#getter();
+            let val = self.mmu.read_byte(address);
+        }
+    };
+    let store = if reg.immediate {
+        quote! {
+            self.cpu.registers.#setter(val);
+        }
+    } else {
+        quote! {
+            self.mmu.write_byte(address, val);
+        }
+    };
+
+    let op = if entry.mnemonic == "SET" {
+        let mask: u8 = 1 << bit;
+        quote! {
+            let val = val | #mask;
+        }
+    } else {
+        let mask: u8 = !(1 << bit);
+        quote! {
+            let val = val & #mask;
+        }
+    };
+
+    quote! {
+        #load
+        #op
         #store
     }
 }
