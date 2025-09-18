@@ -5,7 +5,12 @@ use std::{
     process::ExitCode,
 };
 
-use gb_emulator::{cpu::CPU, gb::GameBoy, mmu::MMU};
+use gb_emulator::{
+    cartridge::{Cartridge, NoMBC},
+    cpu::CPU,
+    gb::GameBoy,
+    mmu::MMU,
+};
 use libtest_mimic::{Arguments, Failed, Trial};
 
 use serde::{Deserialize, Serialize};
@@ -78,7 +83,10 @@ fn initialize_test(initial: &GBState) -> GameBoy {
     cpu.registers.set_l(initial.l);
     cpu.set_ime(initial.ime > 0);
 
-    let mut mmu = MMU::new();
+    let cart = Cartridge {
+        mbc: Box::new(NoMBC::new()),
+    };
+    let mut mmu = MMU::new(cart);
 
     initial
         .ram

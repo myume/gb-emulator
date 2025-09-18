@@ -1,4 +1,4 @@
-use crate::utils::compose_bytes;
+use crate::{cartridge::Cartridge, ppu::PPU, utils::compose_bytes};
 
 static WRAM_SIZE: usize = 0xE000 - 0xC000;
 static HRAM_SIZE: usize = 0xFFFF - 0xFF80;
@@ -12,10 +12,13 @@ pub struct MMU {
     hram: [u8; HRAM_SIZE],
     pub interrupt_enable: u8,
     pub interrupt_flag: u8,
+
+    ppu: PPU,
+    cartridge: Cartridge,
 }
 
 impl MMU {
-    pub fn new() -> Self {
+    pub fn new(cartridge: Cartridge) -> Self {
         MMU {
             stub_ram: [0; 0xFFFF],
 
@@ -24,6 +27,8 @@ impl MMU {
             hram: [0; HRAM_SIZE],
             interrupt_enable: 0,
             interrupt_flag: 0,
+            ppu: PPU::new(),
+            cartridge,
         }
     }
 

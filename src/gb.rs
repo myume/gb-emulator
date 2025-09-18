@@ -1,4 +1,4 @@
-use crate::{cpu::CPU, mmu::MMU};
+use crate::{cartridge::Cartridge, cpu::CPU, mmu::MMU};
 
 pub struct GameBoy {
     pub cpu: CPU,
@@ -6,10 +6,10 @@ pub struct GameBoy {
 }
 
 impl GameBoy {
-    pub fn new() -> Self {
+    pub fn new(cartridge: Cartridge) -> Self {
         GameBoy {
             cpu: CPU::new(),
-            mmu: MMU::new(),
+            mmu: MMU::new(cartridge),
         }
     }
 }
