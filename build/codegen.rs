@@ -109,7 +109,7 @@ pub fn generate_opcode_instructions(opcode_table_path: &Path) -> String {
         );
         let hex_literal = LitInt::new(opcode, Span::call_site());
         let cycles = entry.cycles[0];
-        let bytes = entry.bytes;
+        let bytes = entry.bytes - 1;
 
         let body = generate_cb_body(&entry);
 
@@ -1018,11 +1018,9 @@ fn handle_bit(entry: &OpcodeEntry) -> TokenStream {
     quote! {
         #load
         let set = val & #mask > 0;
-        if !set {
-            self.cpu.registers.set_flag(CpuFlags::Z, !set);
-            self.cpu.registers.set_flag(CpuFlags::N, false);
-            self.cpu.registers.set_flag(CpuFlags::H, true);
-        }
+        self.cpu.registers.set_flag(CpuFlags::Z, !set);
+        self.cpu.registers.set_flag(CpuFlags::N, false);
+        self.cpu.registers.set_flag(CpuFlags::H, true);
     }
 }
 

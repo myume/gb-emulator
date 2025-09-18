@@ -142,9 +142,6 @@ fn test_opcode(test_case: TestCase) -> Result<(), Failed> {
 
     let opcode = u8::from_str_radix(test_case.name.split(" ").collect::<Vec<&str>>()[0], 16)
         .expect(&format!("Invalid opcode in {}", test_case.name));
-    if opcode == 0xCB {
-        return Ok(());
-    }
     gb.execute_opcode(opcode);
 
     validate_test(&test_case.expected, &gb)
