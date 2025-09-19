@@ -1,7 +1,7 @@
 use crate::{cartridge::Cartridge, ppu::PPU, utils::compose_bytes};
 
-static WRAM_SIZE: usize = 0xE000 - 0xC000;
-static HRAM_SIZE: usize = 0xFFFF - 0xFF80;
+const WRAM_SIZE: usize = 0xE000 - 0xC000;
+const HRAM_SIZE: usize = 0xFFFF - 0xFF80;
 
 pub struct MMU {
     stub_ram: [u8; 0xFFFF], // TODO: remove after everything is implemented

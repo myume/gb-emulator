@@ -1,5 +1,5 @@
-static OAM_SIZE: usize = 0xFEA0 - 0xFE00;
-static VRAM_SIZE: usize = 0xA000 - 0x8000;
+const OAM_SIZE: usize = 0xFEA0 - 0xFE00;
+const VRAM_SIZE: usize = 0xA000 - 0x8000;
 
 pub struct PPU {
     vram: [u8; VRAM_SIZE],
