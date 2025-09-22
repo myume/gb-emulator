@@ -15,11 +15,19 @@ enum LCDCBits {
 }
 
 enum PPUMode {
-    Mode0,
-    Mode1,
-    Mode2,
-    Mode3,
+    HBlank, // Mode0
+    VBlank, // Mode1
+    OAM,    // Mode2
+    VRAM,   // Mode3
 }
+
+const OAM_LENGTH: usize = 80;
+const VRAM_LENGTH: usize = 172;
+const HBLANK_LENGTH: usize = 204;
+const VBLANK_LENGTH: usize = 456;
+
+const TOTAL_SCANLINES: u8 = 154;
+const SCREEN_LINES: u8 = 144;
 
 pub struct PPU {
     mode_clock: usize,
@@ -55,7 +63,7 @@ impl PPU {
     pub fn new() -> Self {
         PPU {
             mode_clock: 0,
-            mode: PPUMode::Mode2,
+            mode: PPUMode::OAM,
             oam: [0; OAM_SIZE],
             vram: [0; VRAM_SIZE],
             dma: 0,
@@ -122,10 +130,41 @@ impl PPU {
         self.mode_clock = self.mode_clock + cycles;
 
         match self.mode {
-            PPUMode::Mode0 => todo!(),
-            PPUMode::Mode1 => todo!(),
-            PPUMode::Mode2 => todo!(),
-            PPUMode::Mode3 => todo!(),
+            PPUMode::OAM => {
+                if self.mode_clock >= OAM_LENGTH {
+                    self.mode_clock %= OAM_LENGTH;
+                    self.mode = PPUMode::VRAM;
+                }
+            }
+            PPUMode::VRAM => {
+                if self.mode_clock >= VRAM_LENGTH {
+                    self.mode_clock %= VRAM_LENGTH;
+                    self.mode = PPUMode::HBlank;
+                }
+            }
+            PPUMode::HBlank => {
+                if self.mode_clock >= HBLANK_LENGTH {
+                    self.mode_clock %= HBLANK_LENGTH;
+                    self.ly += 1;
+
+                    if self.ly == SCREEN_LINES {
+                        self.mode = PPUMode::VBlank;
+                    } else {
+                        self.mode = PPUMode::OAM;
+                    }
+                }
+            }
+            PPUMode::VBlank => {
+                if self.mode_clock >= VBLANK_LENGTH {
+                    self.mode_clock %= VBLANK_LENGTH;
+                    self.ly += 1;
+
+                    if self.ly == TOTAL_SCANLINES {
+                        self.mode = PPUMode::OAM;
+                        self.ly = 0;
+                    }
+                }
+            }
         }
     }
 }
