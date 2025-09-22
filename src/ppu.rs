@@ -15,10 +15,10 @@ enum LCDCBits {
 }
 
 enum PPUMode {
-    HBlank, // Mode0
-    VBlank, // Mode1
-    OAM,    // Mode2
-    VRAM,   // Mode3
+    HBlank = 0, // Mode0
+    VBlank = 1, // Mode1
+    OAM = 2,    // Mode2
+    VRAM = 3,   // Mode3
 }
 
 const OAM_LENGTH: usize = 80;

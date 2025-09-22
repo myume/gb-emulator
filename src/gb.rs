@@ -17,5 +17,10 @@ impl GameBoy {
         let opcode = self.mmu.read_byte(self.cpu.registers.pc());
         let cycles = self.execute_opcode(opcode);
         self.mmu.tick(cycles);
+
+        if self.cpu.ei && opcode != 0xFB {
+            self.cpu.set_ime(true);
+            self.cpu.ei = false;
+        }
     }
 }

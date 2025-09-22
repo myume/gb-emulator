@@ -124,11 +124,11 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
         )));
     }
 
-    if gb.cpu.ei != expected.ei.unwrap_or(0x00) {
+    if gb.cpu.ei as u8 != expected.ei.unwrap_or(0x00) {
         return Err(Failed::from(format!(
             "Expected ei to be 0x{:X} found 0x{:X}",
             expected.ei.unwrap_or(0x00),
-            gb.cpu.ei
+            gb.cpu.ei as u8
         )));
     }
 

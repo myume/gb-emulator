@@ -896,6 +896,7 @@ fn handle_ldh(entry: &OpcodeEntry) -> TokenStream {
 fn handle_di(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "DI");
     quote! {
+        self.cpu.ei = false;
         self.cpu.set_ime(false);
     }
 }
@@ -904,7 +905,7 @@ fn handle_ei(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "EI");
     quote! {
         // self.cpu.set_ime(true);
-        self.cpu.ei = 1;
+        self.cpu.ei = true;
     }
 }
 
