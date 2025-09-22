@@ -47,6 +47,8 @@ impl MMU {
             0xFEA0..=0xFEFF => self.stub_ram[address as usize],
             // Interrupt flag (IF)
             0xFF0F => self.interrupt_flag,
+            // LCD control and flags
+            0xFF40..0xFF4B => self.ppu.read_byte(address),
             // I/O Registers
             0xFF00..=0xFF7F => self.stub_ram[address as usize],
             // HRAM (high RAM)
@@ -78,6 +80,8 @@ impl MMU {
             0xFE00..=0xFE9F => self.ppu.write_byte(address, byte),
             // Not usable
             0xFEA0..=0xFEFF => self.stub_ram[address as usize] = byte,
+            // LCD control and flags
+            0xFF40..0xFF4B => self.ppu.write_byte(address, byte),
             // Interrupt flag (IF)
             0xFF0F => self.interrupt_flag = byte,
             // I/O Registers
