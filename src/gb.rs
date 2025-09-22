@@ -12,4 +12,10 @@ impl GameBoy {
             mmu: MMU::new(cartridge),
         }
     }
+
+    pub fn tick(&mut self) {
+        let opcode = self.mmu.read_byte(self.cpu.registers.pc());
+        let cycles = self.execute_opcode(opcode);
+        self.mmu.tick(cycles);
+    }
 }

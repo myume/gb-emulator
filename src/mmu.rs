@@ -1,4 +1,4 @@
-use crate::{cartridge::Cartridge, ppu::PPU, utils::compose_bytes};
+use crate::{cartridge::Cartridge, cpu::Cycles, ppu::PPU, utils::compose_bytes};
 
 const WRAM_SIZE: usize = 0xE000 - 0xC000;
 const HRAM_SIZE: usize = 0xFFFF - 0xFF80;
@@ -94,5 +94,9 @@ impl MMU {
         let high = word >> 8;
         self.write_byte(address, low as u8);
         self.write_byte(address.wrapping_add(1), high as u8);
+    }
+
+    pub fn tick(&mut self, cycles: Cycles) {
+        self.ppu.tick(cycles);
     }
 }
