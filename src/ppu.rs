@@ -42,9 +42,17 @@ const VBLANK_CYCLE_LENGTH: usize = 456;
 const TOTAL_SCANLINES: usize = 154;
 const GB_SCREEN_HEIGHT: usize = 144;
 const GB_SCREEN_WIDTH: usize = 160;
-const BG_TILE_WIDTH: usize = 8;
+const BASE_TILE_WIDTH: usize = 8;
 const TILE_MAP_WIDTH: usize = 32;
-const BYTES_PER_TILE: usize = 2;
+
+const BYTES_PER_TILE: usize = 16;
+const BYTES_PER_LINE: usize = 2;
+const BYTES_PER_SPRITE: usize = 4;
+
+type Color = u32; // RGBA8888 format
+type Palette = u8;
+
+const MONOCHROME_PALETTE: [Color; 4] = [0xFFFFFFFF, 0xAAAAAAFF, 0x555555FF, 0x000000FF];
 
 pub struct PPU {
     mode_clock: usize,
@@ -69,13 +77,15 @@ pub struct PPU {
     wy: u8,
     wx: u8,
 
-    bgp: u8, // BG palette data
+    bgp: Palette, // BG palette data
 
     // OBJ palette 0, 1 data
-    obp0: u8,
-    obp1: u8,
+    obp0: Palette,
+    obp1: Palette,
 
-    frame: [u8; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
+    frame: [Color; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
+
+    palette: [Color; 4],
 }
 
 impl PPU {
@@ -104,6 +114,7 @@ impl PPU {
             obp1: 0,
 
             frame: [0; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
+            palette: MONOCHROME_PALETTE,
         }
     }
 
@@ -207,12 +218,67 @@ impl PPU {
             return;
         }
 
-        // step by 4 since there are 4 bytes per sprite attribute.
-        for sprite_address in (OAM_BASE_ADDRESS..=OAM_END_ADDRESS).step_by(4) {
+        let relative_ly = self.ly + 16;
+
+        let obj_size = if is_set(self.lcdc, LCDCBits::OBJSize as u8) {
+            16
+        } else {
+            8
+        };
+
+        for sprite_address in (OAM_BASE_ADDRESS..=OAM_END_ADDRESS).step_by(BYTES_PER_SPRITE) {
             let y = self.read_byte(sprite_address);
             let x = self.read_byte(sprite_address + 1);
-            let tile_index = self.read_byte(sprite_address + 2);
-            let sprite_flags = self.read_byte(sprite_address + 3);
+
+            let x_start = if x >= BASE_TILE_WIDTH as u8 {
+                x - BASE_TILE_WIDTH as u8
+            } else {
+                0
+            };
+            // should be 0 when x is 0 or when x >= 168.
+            let pixels_to_draw = x.max((GB_SCREEN_WIDTH + BASE_TILE_WIDTH) as u8) - x_start;
+
+            if y <= relative_ly && relative_ly < y + obj_size && pixels_to_draw > 0 {
+                let tile_index = self.read_byte(sprite_address + 2);
+                let sprite_flags = self.read_byte(sprite_address + 3);
+
+                let yflip = is_set(sprite_flags, SpriteFlags::YFlip as u8);
+                let xflip = is_set(sprite_flags, SpriteFlags::XFlip as u8);
+
+                let priority = is_set(sprite_flags, SpriteFlags::Priority as u8);
+
+                let palette = if is_set(sprite_flags, SpriteFlags::DMGPalette as u8) {
+                    self.obp1
+                } else {
+                    self.obp0
+                };
+
+                let mut line_within_tile = relative_ly - y;
+                if yflip {
+                    line_within_tile = obj_size - line_within_tile - 1;
+                }
+                let line_offset = (line_within_tile * BYTES_PER_LINE as u8) as u16;
+                let tile_offset = (tile_index * BYTES_PER_TILE as u8) as u16;
+
+                let address = VRAM_BASE_ADDRESS + tile_offset + line_offset;
+
+                let mut pixels =
+                    PPU::compose_pixels(self.read_byte(address), self.read_byte(address + 1));
+                if xflip {
+                    pixels = pixels.reverse_bits();
+                }
+
+                let frame_base = self.ly as usize * GB_SCREEN_WIDTH + x_start as usize;
+
+                self.draw_pixels(
+                    frame_base,
+                    pixels,
+                    x_start.into(),
+                    pixels_to_draw.into(),
+                    palette,
+                    Some(priority),
+                );
+            }
         }
     }
 
@@ -230,12 +296,13 @@ impl PPU {
             0x9000
         };
 
-        let tile_y = (self.scy + self.ly) as usize / BG_TILE_WIDTH;
+        let tile_y = (self.scy + self.ly) as usize / BASE_TILE_WIDTH;
+        let tile_pixel_offset_y = (self.scy + self.ly) as u16 % BASE_TILE_WIDTH as u16;
 
         let mut i = 0;
         while i < GB_SCREEN_WIDTH {
             let x = (self.scx as usize + i) % 256;
-            let tile_x = x / BG_TILE_WIDTH;
+            let tile_x = x / BASE_TILE_WIDTH;
 
             let tile_index = tile_y * TILE_MAP_WIDTH + tile_x;
             let bg_index = self.read_byte(bg_map + tile_index as u16);
@@ -249,17 +316,21 @@ impl PPU {
                     bg_index as i8 as i16 as u16
                 } * BYTES_PER_TILE as u16; // mutiple index by number of bytes per tile to get correct address
 
-            let pixels =
-                PPU::compose_pixels(self.read_byte(bg_address), self.read_byte(bg_address + 1));
+            let pixels = PPU::compose_pixels(
+                self.read_byte(bg_address + tile_pixel_offset_y * BYTES_PER_LINE as u16),
+                self.read_byte(bg_address + tile_pixel_offset_y * BYTES_PER_LINE as u16 + 1),
+            );
 
-            let start_x_offset = tile_x % BG_TILE_WIDTH;
-            let pixels_to_draw = (BG_TILE_WIDTH - start_x_offset).min(GB_SCREEN_WIDTH - i);
+            let start_x_offset = tile_x % BASE_TILE_WIDTH;
+            let pixels_to_draw = (BASE_TILE_WIDTH - start_x_offset).min(GB_SCREEN_WIDTH - i);
 
             self.draw_pixels(
                 self.ly as usize * GB_SCREEN_WIDTH + i,
                 pixels,
                 start_x_offset,
                 pixels_to_draw,
+                self.bgp,
+                None,
             );
 
             i += pixels_to_draw;
@@ -291,11 +362,26 @@ impl PPU {
         pixels: u16,
         pixels_start_offset: usize,
         pixels_to_draw: usize,
+        palette: Palette,
+        priority: Option<bool>,
     ) {
         for i in pixels_start_offset..pixels_start_offset + pixels_to_draw {
-            let shift = 2 * (BG_TILE_WIDTH - i - 1);
-            self.frame[frame_base + i] = ((pixels & 0b11 << shift) >> shift) as u8;
+            let shift = 2 * (BASE_TILE_WIDTH - i - 1);
+            let color_index = (pixels >> shift & 0b11) as u8;
+
+            if Some(true) == priority
+                && self.frame[frame_base + i] != self.get_color_from_palette(self.bgp, 0)
+            {
+                continue;
+            }
+
+            self.frame[frame_base + i] = self.get_color_from_palette(palette, color_index);
         }
+    }
+
+    fn get_color_from_palette(&self, palette: Palette, color_index: u8) -> Color {
+        let color_id = (palette >> (color_index * 2) & 0b11) as u8;
+        self.palette[color_id as usize]
     }
 }
 
@@ -313,16 +399,20 @@ mod test {
     #[test]
     fn test_draw_pixels() {
         let mut ppu = PPU::new();
-        ppu.draw_pixels(0, 0b0010111111111000, 0, 8);
+        let palettte = 0b11100100;
+        ppu.draw_pixels(0, 0b0010111111111000, 0, 8, palettte, None);
 
         assert_eq!(
             ppu.frame[0..8],
-            [0b00, 0b10, 0b11, 0b11, 0b11, 0b11, 0b10, 0b00]
+            [0b00, 0b10, 0b11, 0b11, 0b11, 0b11, 0b10, 0b00].map(|id| MONOCHROME_PALETTE[id])
         );
 
         let mut ppu = PPU::new();
-        ppu.draw_pixels(0, 0b0010111111111000, 0, 2);
+        ppu.draw_pixels(0, 0b0010111111111000, 0, 2, palettte, None);
 
-        assert_eq!(ppu.frame[0..2], [0b00, 0b10]);
+        assert_eq!(
+            ppu.frame[0..2],
+            [0b00, 0b10].map(|id| MONOCHROME_PALETTE[id])
+        );
     }
 }
