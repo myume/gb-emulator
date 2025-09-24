@@ -1,7 +1,19 @@
 use crate::{cpu::Cycles, utils::is_set};
 
-const OAM_SIZE: usize = 0xFEA0 - 0xFE00;
-const VRAM_SIZE: usize = 0xA000 - 0x8000;
+const OAM_BASE_ADDRESS: u16 = 0xFE00;
+const OAM_END_ADDRESS: u16 = 0xFE9F;
+const OAM_SIZE: usize = OAM_END_ADDRESS as usize - OAM_BASE_ADDRESS as usize + 1;
+
+const VRAM_BASE_ADDRESS: u16 = 0x8000;
+const VRAM_END_ADDRESS: u16 = 0x9FFF;
+const VRAM_SIZE: usize = VRAM_END_ADDRESS as usize - VRAM_BASE_ADDRESS as usize + 1;
+
+enum SpriteFlags {
+    Priority = 7,
+    YFlip = 6,
+    XFlip = 5,
+    DMGPalette = 4,
+}
 
 enum LCDCBits {
     LCDEnable = 7,
@@ -22,10 +34,10 @@ enum PPUMode {
     VRAM = 3,   // Mode3
 }
 
-const OAM_LENGTH: usize = 80;
-const VRAM_LENGTH: usize = 172;
-const HBLANK_LENGTH: usize = 204;
-const VBLANK_LENGTH: usize = 456;
+const OAM_CYCLE_LENGTH: usize = 80;
+const VRAM_CYCLE_LENGTH: usize = 172;
+const HBLANK_CYCLE_LENGTH: usize = 204;
+const VBLANK_CYCLE_LENGTH: usize = 456;
 
 const TOTAL_SCANLINES: usize = 154;
 const GB_SCREEN_HEIGHT: usize = 144;
@@ -140,20 +152,20 @@ impl PPU {
 
         match self.mode {
             PPUMode::OAM => {
-                if self.mode_clock >= OAM_LENGTH {
-                    self.mode_clock %= OAM_LENGTH;
+                if self.mode_clock >= OAM_CYCLE_LENGTH {
+                    self.mode_clock %= OAM_CYCLE_LENGTH;
                     self.change_mode(PPUMode::VRAM);
                 }
             }
             PPUMode::VRAM => {
-                if self.mode_clock >= VRAM_LENGTH {
-                    self.mode_clock %= VRAM_LENGTH;
+                if self.mode_clock >= VRAM_CYCLE_LENGTH {
+                    self.mode_clock %= VRAM_CYCLE_LENGTH;
                     self.change_mode(PPUMode::HBlank);
                 }
             }
             PPUMode::HBlank => {
-                if self.mode_clock >= HBLANK_LENGTH {
-                    self.mode_clock %= HBLANK_LENGTH;
+                if self.mode_clock >= HBLANK_CYCLE_LENGTH {
+                    self.mode_clock %= HBLANK_CYCLE_LENGTH;
 
                     self.draw_scanline();
 
@@ -166,8 +178,8 @@ impl PPU {
                 }
             }
             PPUMode::VBlank => {
-                if self.mode_clock >= VBLANK_LENGTH {
-                    self.mode_clock %= VBLANK_LENGTH;
+                if self.mode_clock >= VBLANK_CYCLE_LENGTH {
+                    self.mode_clock %= VBLANK_CYCLE_LENGTH;
                     self.ly += 1;
 
                     if self.ly as usize == TOTAL_SCANLINES {
@@ -194,6 +206,14 @@ impl PPU {
         if !is_set(self.lcdc, LCDCBits::OBJEnable as u8) {
             return;
         }
+
+        // step by 4 since there are 4 bytes per sprite attribute.
+        for sprite_address in (OAM_BASE_ADDRESS..=OAM_END_ADDRESS).step_by(4) {
+            let y = self.read_byte(sprite_address);
+            let x = self.read_byte(sprite_address + 1);
+            let tile_index = self.read_byte(sprite_address + 2);
+            let sprite_flags = self.read_byte(sprite_address + 3);
+        }
     }
 
     fn draw_bg(&mut self) {
@@ -204,7 +224,11 @@ impl PPU {
         };
 
         let tile_data_flag = is_set(self.lcdc, LCDCBits::BgWindowTiles as u8);
-        let bg_data: u16 = if tile_data_flag { 0x8000 } else { 0x9000 };
+        let bg_data: u16 = if tile_data_flag {
+            VRAM_BASE_ADDRESS
+        } else {
+            0x9000
+        };
 
         let tile_y = (self.scy + self.ly) as usize / BG_TILE_WIDTH;
 
