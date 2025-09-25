@@ -1,5 +1,6 @@
 use crate::{
-    cartridge::Cartridge, cpu::Cycles, joypad::Joypad, ppu::PPU, timer::Timer, utils::compose_bytes,
+    cartridge::Cartridge, cpu::Cycles, joypad::Joypad, ppu::PPU, serial::Serial, timer::Timer,
+    utils::compose_bytes,
 };
 
 const WRAM_SIZE: usize = 0xE000 - 0xC000;
@@ -15,6 +16,7 @@ pub struct MMU {
     pub joypad: Joypad,
     pub timer: Timer,
     pub cartridge: Cartridge,
+    pub serial: Serial,
 
     #[cfg(feature = "test")]
     test_ram: [u8; 0xFFFF + 1],
@@ -30,6 +32,7 @@ impl MMU {
             ppu: PPU::new(),
             joypad: Joypad::new(),
             timer: Timer::new(),
+            serial: Serial::new(),
             cartridge,
 
             #[cfg(feature = "test")]
@@ -62,6 +65,7 @@ impl MMU {
             0xFF40..0xFF4B => self.ppu.read_byte(address),
             // I/O Registers
             0xFF00 => self.joypad.read(),
+            0xFF01..0xFF02 => self.serial.read_byte(address),
             0xFF04..=0xFF07 => self.timer.read_byte(address),
             0xFF40..=0xFF4B => self.ppu.read_byte(address),
             // HRAM (high RAM)
@@ -103,6 +107,7 @@ impl MMU {
             0xFF0F => self.interrupt_flag = byte,
             // I/O Registers
             0xFF00 => self.joypad.write(byte),
+            0xFF01..0xFF02 => self.serial.write_byte(address, byte),
             0xFF04..=0xFF07 => self.timer.write_byte(address, byte),
             0xFF40..=0xFF4B => self.ppu.write_byte(address, byte),
             // HRAM (high RAM)
@@ -123,5 +128,6 @@ impl MMU {
     pub fn tick(&mut self, cycles: Cycles) {
         self.ppu.tick(cycles);
         self.timer.tick(cycles);
+        self.serial.tick(cycles);
     }
 }
