@@ -42,7 +42,7 @@ impl MMU {
             // WRAM
             0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize],
             // Echo RAM (prohibited)
-            0xE000..=0xFDFF => 0xFF,
+            0xE000..=0xFDFF => self.read_byte(address - 0x2000),
             // OAM (Object attribute memory)
             0xFE00..=0xFE9F => self.ppu.read_byte(address),
             // Not usable
@@ -80,7 +80,7 @@ impl MMU {
             // WRAM
             0xC000..=0xDFFF => self.wram[(address - 0xC000) as usize] = byte,
             // Echo RAM (prohibited)
-            0xE000..=0xFDFF => {}
+            0xE000..=0xFDFF => self.write_byte(address - 0x2000, byte),
             // OAM (Object attribute memory)
             0xFE00..=0xFE9F => self.ppu.write_byte(address, byte),
             // Not usable
