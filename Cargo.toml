@@ -6,6 +6,7 @@ build = "build/build.rs"
 
 [features]
 test = []
+gb_doctor = []
 
 [dependencies]
 clap = { version = "4.5.48", features = ["derive"] }

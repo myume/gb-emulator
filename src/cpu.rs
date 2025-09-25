@@ -309,15 +309,15 @@ impl CpuFlags {
 impl Registers {
     pub fn new() -> Self {
         Registers {
-            a: 0,
-            f: 0,
-            b: 0,
-            c: 0,
-            d: 0,
-            e: 0,
-            h: 0,
-            l: 0,
-            sp: 0,
+            a: 0x01,
+            f: 0xB0,
+            b: 0x00,
+            c: 0x13,
+            d: 0x00,
+            e: 0xD8,
+            h: 0x01,
+            l: 0x4D,
+            sp: 0xFFFE,
             pc: 0x0100,
         }
     }
@@ -396,9 +396,25 @@ create_combined_registers!((a, f), (b, c), (d, e), (h, l));
 mod test {
     use super::*;
 
+    impl Registers {
+        fn clear(&mut self) {
+            self.set_a(0);
+            self.set_f(0);
+            self.set_b(0);
+            self.set_c(0);
+            self.set_d(0);
+            self.set_e(0);
+            self.set_h(0);
+            self.set_l(0);
+            self.set_sp(0);
+            self.set_pc(0);
+        }
+    }
+
     #[test]
     fn test_combined_registers() {
         let mut regs = Registers::new();
+        regs.clear();
 
         assert_eq!(regs.b(), 0);
         assert_eq!(regs.c(), 0);
@@ -422,6 +438,7 @@ mod test {
     #[test]
     fn test_alu_add() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
         cpu.alu_add(10, false);
         assert_eq!(cpu.registers.a(), 10);
     }
@@ -429,6 +446,7 @@ mod test {
     #[test]
     fn test_alu_add_carry() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
         cpu.registers.set_flag(CpuFlags::C, true);
         cpu.alu_add(10, true);
 
@@ -438,6 +456,7 @@ mod test {
     #[test]
     fn test_alu_add_flags() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
         cpu.registers.set_a(1);
         cpu.alu_add(0xFF, false);
         assert_eq!(cpu.registers.a(), 0);
@@ -450,6 +469,7 @@ mod test {
     #[test]
     fn test_alu_sub() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
         cpu.alu_sub(1, false);
         assert_eq!(cpu.registers.a(), 0xFF);
         assert!(!cpu.registers.get_flag(CpuFlags::Z));
@@ -461,6 +481,7 @@ mod test {
     #[test]
     fn test_rlca() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         assert!(!cpu.registers.get_flag(CpuFlags::C));
 
@@ -474,6 +495,7 @@ mod test {
     #[test]
     fn test_rla() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         assert!(!cpu.registers.get_flag(CpuFlags::C));
 
@@ -491,6 +513,7 @@ mod test {
     #[test]
     fn test_rrca() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         cpu.registers.set_a(0b0000_0001);
         cpu.alu_rrca();
@@ -502,6 +525,7 @@ mod test {
     #[test]
     fn test_rra() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         cpu.registers.set_a(0b0000_0001);
         cpu.alu_rra();
@@ -517,6 +541,7 @@ mod test {
     #[test]
     fn test_cpl() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         cpu.registers.set_a(0b1010_0101);
         cpu.alu_cpl();
@@ -529,6 +554,7 @@ mod test {
     #[test]
     fn test_sla() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         let result = cpu.alu_sla(0b0000_0001);
 
@@ -543,6 +569,7 @@ mod test {
     #[test]
     fn test_sra() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         let result = cpu.alu_sra(0b0000_0001);
         assert!(cpu.registers.get_flag(CpuFlags::C));
@@ -556,6 +583,7 @@ mod test {
     #[test]
     fn test_srl() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         let result = cpu.alu_srl(0b0000_0001);
         assert!(cpu.registers.get_flag(CpuFlags::C));
@@ -569,6 +597,7 @@ mod test {
     #[test]
     fn test_swap() {
         let mut cpu = CPU::new();
+        cpu.registers.clear();
 
         let result = cpu.alu_swap(0b0000_0001);
         assert_eq!(result, 0b0001_0000);

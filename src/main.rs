@@ -11,6 +11,7 @@ fn main() {
 
     let cartridge = match Cartridge::load_cartridge(&PathBuf::from(&config.cartridge_path)) {
         Ok(cart) => {
+            #[cfg(not(feature = "gb_doctor"))]
             println!("Loaded ROM: {}", cart.title);
             cart
         }

@@ -20,6 +20,7 @@
           rustc
           cargo
           rustfmt
+          python3
         ];
       };
     });

@@ -126,7 +126,11 @@ impl PPU {
             0xFF41 => self.stat,
             0xFF42 => self.scy,
             0xFF43 => self.scx,
-            0xFF44 => self.ly,
+            0xFF44 => {
+                #[cfg(feature = "gb_doctor")]
+                return 0x90;
+                self.ly
+            }
             0xFF45 => self.lyc,
             0xFF46 => self.dma,
             0xFF47 => self.bgp,
