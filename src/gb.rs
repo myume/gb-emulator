@@ -1,7 +1,13 @@
+use clap::Parser;
+
 use crate::{cartridge::Cartridge, cpu::CPU, mmu::MMU};
 
-#[derive(Default)]
+#[derive(Parser, Debug, Default)]
+#[command(version, about, long_about = None)]
 pub struct GameBoyConfig {
+    pub cartridge_path: String,
+
+    #[arg(short, long)]
     pub print_serial: bool,
 }
 

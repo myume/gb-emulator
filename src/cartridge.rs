@@ -1,5 +1,30 @@
+use std::{
+    fs::File,
+    io::{self, Read},
+    path::Path,
+};
+
 pub struct Cartridge {
+    pub title: String,
+    pub bytes: usize,
+
     pub mbc: Box<dyn MBC>,
+}
+
+impl Cartridge {
+    pub fn load_cartridge(path: &Path) -> io::Result<Cartridge> {
+        let mut f = File::open(path)?;
+        let mut data = Vec::new();
+
+        let bytes = f.read_to_end(&mut data)?;
+
+        let title = String::from_utf8_lossy(&data[0x0134..0x0143]).to_string();
+        Ok(Cartridge {
+            title,
+            bytes,
+            mbc: Box::new(NoMBC::new()),
+        })
+    }
 }
 
 pub trait MBC {

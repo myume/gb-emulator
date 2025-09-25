@@ -85,6 +85,8 @@ fn initialize_test(initial: &GBState) -> GameBoy {
     cpu.set_ime(initial.ime > 0);
 
     let cart = Cartridge {
+        title: "test".into(),
+        bytes: 0,
         mbc: Box::new(NoMBC::new()),
     };
     let mut mmu = MMU::new(cart, GameBoyConfig::default());

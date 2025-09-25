@@ -67,7 +67,5 @@ impl Timer {
         }
     }
 
-    pub fn tick(&self, cycles: Cycles) {
-        todo!()
-    }
+    pub fn tick(&self, cycles: Cycles) {}
 }
