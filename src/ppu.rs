@@ -134,7 +134,7 @@ impl PPU {
             0xFF49 => self.obp1,
             0xFF4A => self.wy,
             0xFF4B => self.wx,
-            _ => panic!("Invalid PPU Address: 0x{:X}", address),
+            _ => panic!("Invalid PPU Address: {:#06X}", address),
         }
     }
 
@@ -154,7 +154,7 @@ impl PPU {
             0xFF49 => self.obp1 = byte,
             0xFF4A => self.wy = byte,
             0xFF4B => self.wx = byte,
-            _ => panic!("Invalid PPU Address: 0x{:X}", address),
+            _ => panic!("Invalid PPU Address: {:#06X}", address),
         }
     }
 

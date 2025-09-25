@@ -19,10 +19,20 @@ impl Cartridge {
         let bytes = f.read_to_end(&mut data)?;
 
         let title = String::from_utf8_lossy(&data[0x0134..0x0143]).to_string();
+
+        let cart_type = data[0x147];
+        let rom_size = data[0x148];
+        let ram_size = data[0x149];
+
+        let mbc = match cart_type {
+            0x00 => NoMBC::new(),
+            _ => panic!("Unsupported cartridge type: {:#04X}", cart_type),
+        };
+
         Ok(Cartridge {
             title,
             bytes,
-            mbc: Box::new(NoMBC::new()),
+            mbc: Box::new(mbc),
         })
     }
 }

@@ -106,7 +106,7 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
                 $(
                     if gb.cpu.registers.$r() != expected.$r {
                         return Err(Failed::from(format!(
-                            "Expected register {} to be 0x{:X} found 0x{:X}",
+                            "Expected register {} to be {:#04X} found {:#04X}",
                             stringify!($r),
                             expected.$r,
                             gb.cpu.registers.$r()
@@ -121,7 +121,7 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
 
     if gb.cpu.get_ime() as u8 != expected.ime {
         return Err(Failed::from(format!(
-            "Expected ime to be 0x{:X} found 0x{:X}",
+            "Expected ime to be {:#04X} found {:#04X}",
             expected.ime,
             gb.cpu.get_ime() as u8
         )));
@@ -129,7 +129,7 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
 
     if gb.cpu.ei as u8 != expected.ei.unwrap_or(0x00) {
         return Err(Failed::from(format!(
-            "Expected ei to be 0x{:X} found 0x{:X}",
+            "Expected ei to be {:#04X} found {:#04X}",
             expected.ei.unwrap_or(0x00),
             gb.cpu.ei as u8
         )));
@@ -139,7 +139,7 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
         let actual = gb.mmu.read_byte(*address);
         if actual != *value {
             return Err(Failed::from(format!(
-                "Expected ram at address 0x{:X} to be 0x{:X} found 0x{:X}",
+                "Expected ram at address {:#06X} to be {:#04X} found {:#04X}",
                 address, value, actual
             )));
         }

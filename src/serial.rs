@@ -19,7 +19,7 @@ impl Serial {
         match address {
             0xFF01 => self.data,
             0xFF02 => self.control,
-            _ => panic!("Invalid Serial address 0x{:X}", address),
+            _ => panic!("Invalid Serial address {:#06X}", address),
         }
     }
 
@@ -32,7 +32,7 @@ impl Serial {
                     print!("{}", byte);
                 }
             }
-            _ => panic!("Invalid Serial address 0x{:X}", address),
+            _ => panic!("Invalid Serial address {:#06X}", address),
         }
     }
 }

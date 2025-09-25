@@ -44,7 +44,7 @@ impl Timer {
                     clock_select
                 }
             }
-            _ => panic!("Invalid Timer address 0x{:X}", address),
+            _ => panic!("Invalid Timer address {:#06X}", address),
         }
     }
 
@@ -63,7 +63,7 @@ impl Timer {
                     _ => unreachable!(),
                 }
             }
-            _ => panic!("Invalid Timer address 0x{:X}", address),
+            _ => panic!("Invalid Timer address {:#06X}", address),
         }
     }
 
