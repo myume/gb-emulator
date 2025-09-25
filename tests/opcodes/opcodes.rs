@@ -8,7 +8,7 @@ use std::{
 use gb_emulator::{
     cartridge::{Cartridge, NoMBC},
     cpu::CPU,
-    gb::GameBoy,
+    gb::{GameBoy, GameBoyConfig},
     mmu::MMU,
 };
 use libtest_mimic::{Arguments, Failed, Trial};
@@ -48,6 +48,7 @@ fn main() -> ExitCode {
 
     // TODO: figure out how to load this faster.
     // Bottleneck is loading the test cases and not actually running the tests lol.
+
     let tests = json_test_dir
         .map(|file| {
             let json_test_file = File::open(file.unwrap().path()).unwrap();
@@ -86,7 +87,7 @@ fn initialize_test(initial: &GBState) -> GameBoy {
     let cart = Cartridge {
         mbc: Box::new(NoMBC::new()),
     };
-    let mut mmu = MMU::new(cart);
+    let mut mmu = MMU::new(cart, GameBoyConfig::default());
 
     initial
         .ram
