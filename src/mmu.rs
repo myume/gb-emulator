@@ -15,6 +15,9 @@ pub struct MMU {
     pub joypad: Joypad,
     pub timer: Timer,
     pub cartridge: Cartridge,
+
+    #[cfg(feature = "test")]
+    test_ram: [u8; 0xFFFF + 1],
 }
 
 impl MMU {
@@ -28,10 +31,16 @@ impl MMU {
             joypad: Joypad::new(),
             timer: Timer::new(),
             cartridge,
+
+            #[cfg(feature = "test")]
+            test_ram: [0; 0xFFFF + 1],
         }
     }
 
     pub fn read_byte(&self, address: u16) -> u8 {
+        #[cfg(feature = "test")]
+        return self.test_ram[address as usize];
+
         match address {
             // cartridge
             0x0000..=0x7FFF => self.cartridge.mbc.read_byte(address),
@@ -70,6 +79,9 @@ impl MMU {
     }
 
     pub fn write_byte(&mut self, address: u16, byte: u8) {
+        #[cfg(feature = "test")]
+        return self.test_ram[address as usize] = byte;
+
         match address {
             // cartridge
             0x0000..=0x7FFF => self.cartridge.mbc.write_byte(address, byte),
