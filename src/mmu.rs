@@ -1,4 +1,6 @@
-use crate::{cartridge::Cartridge, cpu::Cycles, joypad::Joypad, ppu::PPU, utils::compose_bytes};
+use crate::{
+    cartridge::Cartridge, cpu::Cycles, joypad::Joypad, ppu::PPU, timer::Timer, utils::compose_bytes,
+};
 
 const WRAM_SIZE: usize = 0xE000 - 0xC000;
 const HRAM_SIZE: usize = 0xFFFF - 0xFF80;
@@ -9,8 +11,9 @@ pub struct MMU {
     pub interrupt_enable: u8,
     pub interrupt_flag: u8,
 
-    ppu: PPU,
+    pub ppu: PPU,
     pub joypad: Joypad,
+    pub timer: Timer,
     pub cartridge: Cartridge,
 }
 
@@ -23,6 +26,7 @@ impl MMU {
             interrupt_flag: 0,
             ppu: PPU::new(),
             joypad: Joypad::new(),
+            timer: Timer::new(),
             cartridge,
         }
     }
@@ -49,6 +53,7 @@ impl MMU {
             0xFF40..0xFF4B => self.ppu.read_byte(address),
             // I/O Registers
             0xFF00 => self.joypad.read(),
+            0xFF04..=0xFF07 => self.timer.read_byte(address),
             0xFF40..=0xFF4B => self.ppu.read_byte(address),
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize],
@@ -86,6 +91,7 @@ impl MMU {
             0xFF0F => self.interrupt_flag = byte,
             // I/O Registers
             0xFF00 => self.joypad.write(byte),
+            0xFF04..=0xFF07 => self.timer.write_byte(address, byte),
             0xFF40..=0xFF4B => self.ppu.write_byte(address, byte),
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize] = byte,
@@ -104,5 +110,6 @@ impl MMU {
 
     pub fn tick(&mut self, cycles: Cycles) {
         self.ppu.tick(cycles);
+        self.timer.tick(cycles);
     }
 }
