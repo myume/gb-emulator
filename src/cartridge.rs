@@ -4,9 +4,15 @@ use std::{
     path::Path,
 };
 
+use crate::cartridge::mbc1::MBC1;
+
+mod mbc1;
+
+pub const ROM_BANK_SIZE: usize = 0x4000;
+pub const RAM_BANK_SIZE: usize = 0x2000;
+
 pub struct Cartridge {
     pub title: String,
-    pub bytes: usize,
 
     pub mbc: Box<dyn MBC>,
 }
@@ -14,26 +20,36 @@ pub struct Cartridge {
 impl Cartridge {
     pub fn load_cartridge(path: &Path) -> io::Result<Cartridge> {
         let mut f = File::open(path)?;
-        let mut data = Vec::new();
+        let mut rom = Vec::new();
 
-        let bytes = f.read_to_end(&mut data)?;
+        f.read_to_end(&mut rom)?;
 
-        let title = String::from_utf8_lossy(&data[0x0134..0x0143]).to_string();
+        let title = String::from_utf8_lossy(&rom[0x0134..0x0143]).to_string();
 
-        let cart_type = data[0x147];
-        let rom_size = data[0x148];
-        let ram_size = data[0x149];
+        let cart_type = rom[0x147];
+        // let rom_size = ROM_BANK_SIZE * 2 * (1 << rom[0x148]);
+        let ram_size = RAM_BANK_SIZE
+            * match rom[0x149] {
+                0x00 => 0,
+                0x01 => unreachable!("Unused RAM size"),
+                0x02 => 1,
+                0x03 => 4,
+                0x04 => 16,
+                0x05 => 64,
+                _ => unreachable!("Invalid RAM size"),
+            };
 
-        let mbc = match cart_type {
-            0x00 => NoMBC::new(),
+        let mbc: Box<dyn MBC> = match cart_type {
+            0x00 => {
+                let mut mbc = NoMBC::new();
+                mbc.load_rom(rom.as_slice());
+                Box::new(mbc)
+            }
+            0x01..=0x03 => Box::new(MBC1::new(rom, ram_size)),
             _ => panic!("Unsupported cartridge type: {:#04X}", cart_type),
         };
 
-        Ok(Cartridge {
-            title,
-            bytes,
-            mbc: Box::new(mbc),
-        })
+        Ok(Cartridge { title, mbc })
     }
 }
 
@@ -53,6 +69,10 @@ impl NoMBC {
             rom: [0; 0x8000],
             ram: [0; 0xC000 - 0xA000],
         }
+    }
+
+    fn load_rom(&mut self, data: &[u8]) {
+        self.rom.copy_from_slice(data);
     }
 }
 
