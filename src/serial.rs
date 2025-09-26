@@ -1,3 +1,5 @@
+use std::io::{self, Write};
+
 use crate::utils::is_set;
 
 pub struct Serial {
@@ -30,6 +32,7 @@ impl Serial {
                 self.control = byte;
                 if is_set(self.control, 7) && self.print_serial {
                     print!("{}", self.data as char);
+                    io::stdout().flush().unwrap();
                 }
             }
             _ => panic!("Invalid Serial address {:#06X}", address),
