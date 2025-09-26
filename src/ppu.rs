@@ -300,12 +300,13 @@ impl PPU {
             0x9000
         };
 
-        let tile_y = (self.scy + self.ly) as usize / BASE_TILE_WIDTH;
-        let tile_pixel_offset_y = (self.scy + self.ly) as u16 % BASE_TILE_WIDTH as u16;
+        let tile_y = (self.scy as usize + self.ly as usize % 256) as usize / BASE_TILE_WIDTH;
+        let tile_pixel_offset_y =
+            (self.scy as usize + self.ly as usize % 256) as u16 % BASE_TILE_WIDTH as u16;
 
-        let mut i = 0;
-        while i < GB_SCREEN_WIDTH {
-            let x = (self.scx as usize + i) % 256;
+        let mut pixels_drawn = 0;
+        while pixels_drawn < GB_SCREEN_WIDTH {
+            let x = (self.scx as usize + pixels_drawn) % 256;
             let tile_x = x / BASE_TILE_WIDTH;
 
             let tile_index = tile_y * TILE_MAP_WIDTH + tile_x;
@@ -325,11 +326,12 @@ impl PPU {
                 self.read_byte(bg_address + tile_pixel_offset_y * BYTES_PER_LINE as u16 + 1),
             );
 
-            let start_x_offset = tile_x % BASE_TILE_WIDTH;
-            let pixels_to_draw = (BASE_TILE_WIDTH - start_x_offset).min(GB_SCREEN_WIDTH - i);
+            let start_x_offset = x % BASE_TILE_WIDTH;
+            let pixels_to_draw =
+                (BASE_TILE_WIDTH - start_x_offset).min(GB_SCREEN_WIDTH - pixels_drawn);
 
             self.draw_pixels(
-                self.ly as usize * GB_SCREEN_WIDTH + i,
+                self.ly as usize * GB_SCREEN_WIDTH + pixels_drawn,
                 pixels,
                 start_x_offset,
                 pixels_to_draw,
@@ -337,7 +339,7 @@ impl PPU {
                 None,
             );
 
-            i += pixels_to_draw;
+            pixels_drawn += pixels_to_draw;
         }
     }
 
