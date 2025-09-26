@@ -21,6 +21,7 @@
           cargo
           rustfmt
           python3
+          SDL2
         ];
       };
     });
