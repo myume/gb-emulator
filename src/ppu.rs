@@ -40,8 +40,8 @@ const HBLANK_CYCLE_LENGTH: usize = 204;
 const VBLANK_CYCLE_LENGTH: usize = 456;
 
 const TOTAL_SCANLINES: usize = 154;
-const GB_SCREEN_HEIGHT: usize = 144;
-const GB_SCREEN_WIDTH: usize = 160;
+pub const GB_SCREEN_HEIGHT: usize = 144;
+pub const GB_SCREEN_WIDTH: usize = 160;
 const BASE_TILE_WIDTH: usize = 8;
 const TILE_MAP_WIDTH: usize = 32;
 

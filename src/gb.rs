@@ -1,6 +1,10 @@
 use clap::Parser;
 
-use crate::{cartridge::Cartridge, cpu::CPU, mmu::MMU};
+use crate::{
+    cartridge::Cartridge,
+    cpu::{CPU, Cycles},
+    mmu::MMU,
+};
 
 #[derive(Parser, Debug, Default)]
 #[command(version, about, long_about = None)]
@@ -24,7 +28,7 @@ impl GameBoy {
         }
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> Cycles {
         #[cfg(feature = "gb_doctor")]
         self.print_registers();
 
@@ -36,6 +40,8 @@ impl GameBoy {
             self.cpu.set_ime(true);
             self.cpu.ei = false;
         }
+
+        cycles
     }
 
     #[cfg(feature = "gb_doctor")]

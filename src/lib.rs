@@ -4,7 +4,7 @@ pub mod gb;
 mod instructions;
 mod joypad;
 pub mod mmu;
-mod ppu;
+pub mod ppu;
 mod serial;
 mod timer;
 mod utils;
