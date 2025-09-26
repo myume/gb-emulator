@@ -49,10 +49,15 @@ const BYTES_PER_TILE: usize = 16;
 const BYTES_PER_LINE: usize = 2;
 const BYTES_PER_SPRITE: usize = 4;
 
-type Color = u32; // RGBA8888 format
+type Color = [u8; 4]; // RGBA8888 format
 type Palette = u8;
 
-const MONOCHROME_PALETTE: [Color; 4] = [0xFFFFFFFF, 0xAAAAAAFF, 0x555555FF, 0x000000FF];
+const MONOCHROME_PALETTE: [Color; 4] = [
+    [0xFF, 0xFF, 0xFF, 0xFF], // white
+    [0xAA, 0xAA, 0xAA, 0xFF], // light gray
+    [0x55, 0x55, 0x55, 0xFF], // dark gray
+    [0x00, 0x00, 0x00, 0xFF], // black
+];
 
 pub struct PPU {
     mode_clock: usize,
@@ -113,7 +118,7 @@ impl PPU {
             obp0: 0,
             obp1: 0,
 
-            frame: [0; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
+            frame: [MONOCHROME_PALETTE[0]; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
             palette: MONOCHROME_PALETTE,
         }
     }
@@ -388,6 +393,10 @@ impl PPU {
     fn get_color_from_palette(&self, palette: Palette, color_index: u8) -> Color {
         let color_id = (palette >> (color_index * 2) & 0b11) as u8;
         self.palette[color_id as usize]
+    }
+
+    pub fn pixel_data(&self) -> &[u8] {
+        self.frame.as_flattened()
     }
 }
 

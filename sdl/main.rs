@@ -6,7 +6,7 @@ use gb_emulator::{
     gb::GameBoy,
     ppu::{GB_SCREEN_HEIGHT, GB_SCREEN_WIDTH},
 };
-use sdl2::{event::Event, keyboard::Keycode};
+use sdl2::{event::Event, keyboard::Keycode, pixels::PixelFormatEnum, render::TextureAccess};
 
 #[derive(Parser, Debug, Default)]
 #[command(version, about, long_about = None)]
@@ -44,6 +44,16 @@ fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     canvas.clear();
 
+    let texture_creator = canvas.texture_creator();
+    let mut texture = texture_creator
+        .create_texture(
+            PixelFormatEnum::ARGB8888,
+            TextureAccess::Streaming,
+            GB_SCREEN_WIDTH as u32,
+            GB_SCREEN_HEIGHT as u32,
+        )
+        .expect("Failed to create texture");
+
     let mut event_pump = sdl_context.event_pump().unwrap();
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -58,6 +68,12 @@ fn main() {
         }
 
         gb.tick();
+        texture
+            .update(None, gb.pixel_data(), GB_SCREEN_WIDTH * 4)
+            .expect("Failed to update texture");
+        canvas
+            .copy(&texture, None, None)
+            .expect("Failed to copy texture to canvas");
         canvas.present();
     }
 }

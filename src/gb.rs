@@ -33,6 +33,10 @@ impl GameBoy {
         cycles
     }
 
+    pub fn pixel_data(&self) -> &[u8] {
+        self.mmu.ppu.pixel_data()
+    }
+
     #[cfg(feature = "gb_doctor")]
     fn print_registers(&self) {
         println!(
