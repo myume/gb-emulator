@@ -1,0 +1,15 @@
+[package]
+name = "sdl"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies.gb-emulator]
+path = "../"
+
+[dependencies]
+clap = { version = "4.5.48", features = ["derive"] }
+sdl2 = "0.38.0"
+
+[[bin]]
+name = "sdl"
+path = "main.rs"

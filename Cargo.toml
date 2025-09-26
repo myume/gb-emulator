@@ -9,9 +9,7 @@ test = []
 gb_doctor = []
 
 [dependencies]
-clap = { version = "4.5.48", features = ["derive"] }
 paste = "1.0.15"
-sdl2 = "0.38.0"
 
 [dev-dependencies]
 libtest-mimic = "0.8.1"

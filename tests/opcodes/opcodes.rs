@@ -8,7 +8,7 @@ use std::{
 use gb_emulator::{
     cartridge::{Cartridge, NoMBC},
     cpu::CPU,
-    gb::{GameBoy, GameBoyConfig},
+    gb::GameBoy,
     mmu::MMU,
 };
 use libtest_mimic::{Arguments, Failed, Trial};
@@ -88,7 +88,7 @@ fn initialize_test(initial: &GBState) -> GameBoy {
         title: "test".into(),
         mbc: Box::new(NoMBC::new()),
     };
-    let mut mmu = MMU::new(cart, GameBoyConfig::default());
+    let mut mmu = MMU::new(cart, false);
 
     initial
         .ram

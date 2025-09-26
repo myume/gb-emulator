@@ -1,19 +1,8 @@
-use clap::Parser;
-
 use crate::{
     cartridge::Cartridge,
     cpu::{CPU, Cycles},
     mmu::MMU,
 };
-
-#[derive(Parser, Debug, Default)]
-#[command(version, about, long_about = None)]
-pub struct GameBoyConfig {
-    pub cartridge_path: String,
-
-    #[arg(short, long)]
-    pub print_serial: bool,
-}
 
 pub struct GameBoy {
     pub cpu: CPU,
@@ -21,10 +10,10 @@ pub struct GameBoy {
 }
 
 impl GameBoy {
-    pub fn new(cartridge: Cartridge, config: GameBoyConfig) -> Self {
+    pub fn new(cartridge: Cartridge, print_serial: bool) -> Self {
         GameBoy {
             cpu: CPU::new(),
-            mmu: MMU::new(cartridge, config),
+            mmu: MMU::new(cartridge, print_serial),
         }
     }
 

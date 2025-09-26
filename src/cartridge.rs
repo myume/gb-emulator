@@ -49,6 +49,9 @@ impl Cartridge {
             _ => panic!("Unsupported cartridge type: {:#04X}", cart_type),
         };
 
+        #[cfg(not(feature = "gb_doctor"))]
+        println!("Loaded ROM: {}", title);
+
         Ok(Cartridge { title, mbc })
     }
 }

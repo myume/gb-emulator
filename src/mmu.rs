@@ -1,6 +1,6 @@
 use crate::{
-    cartridge::Cartridge, cpu::Cycles, gb::GameBoyConfig, joypad::Joypad, ppu::PPU, serial::Serial,
-    timer::Timer, utils::compose_bytes,
+    cartridge::Cartridge, cpu::Cycles, joypad::Joypad, ppu::PPU, serial::Serial, timer::Timer,
+    utils::compose_bytes,
 };
 
 const WRAM_SIZE: usize = 0xE000 - 0xC000;
@@ -23,7 +23,7 @@ pub struct MMU {
 }
 
 impl MMU {
-    pub fn new(cartridge: Cartridge, config: GameBoyConfig) -> Self {
+    pub fn new(cartridge: Cartridge, print_serial: bool) -> Self {
         MMU {
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
@@ -32,7 +32,7 @@ impl MMU {
             ppu: PPU::new(),
             joypad: Joypad::new(),
             timer: Timer::new(),
-            serial: Serial::new(config.print_serial),
+            serial: Serial::new(print_serial),
             cartridge,
 
             #[cfg(feature = "test")]
