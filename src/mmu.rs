@@ -62,12 +62,11 @@ impl MMU {
             // Interrupt flag (IF)
             0xFF0F => self.interrupt_flag,
             // LCD control and flags
-            0xFF40..0xFF4B => self.ppu.read_byte(address),
+            0xFF40..=0xFF4B => self.ppu.read_byte(address),
             // I/O Registers
             0xFF00 => self.joypad.read(),
-            0xFF01..0xFF02 => self.serial.read_byte(address),
+            0xFF01..=0xFF02 => self.serial.read_byte(address),
             0xFF04..=0xFF07 => self.timer.read_byte(address),
-            0xFF40..=0xFF4B => self.ppu.read_byte(address),
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize],
             // Interrupt Enable register (IE)
@@ -102,14 +101,13 @@ impl MMU {
             // Not usable
             0xFEA0..=0xFEFF => {}
             // LCD control and flags
-            0xFF40..0xFF4B => self.ppu.write_byte(address, byte),
+            0xFF40..=0xFF4B => self.ppu.write_byte(address, byte),
             // Interrupt flag (IF)
             0xFF0F => self.interrupt_flag = byte,
             // I/O Registers
             0xFF00 => self.joypad.write(byte),
-            0xFF01..0xFF02 => self.serial.write_byte(address, byte),
+            0xFF01..=0xFF02 => self.serial.write_byte(address, byte),
             0xFF04..=0xFF07 => self.timer.write_byte(address, byte),
-            0xFF40..=0xFF4B => self.ppu.write_byte(address, byte),
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize] = byte,
             // Interrupt Enable register (IE)

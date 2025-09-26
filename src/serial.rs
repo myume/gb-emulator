@@ -29,7 +29,7 @@ impl Serial {
             0xFF02 => {
                 self.control = byte;
                 if is_set(self.control, 7) && self.print_serial {
-                    print!("{}", byte);
+                    print!("{}", self.data as char);
                 }
             }
             _ => panic!("Invalid Serial address {:#06X}", address),
