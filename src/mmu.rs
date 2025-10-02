@@ -40,7 +40,7 @@ impl MMU {
             hram: [0; HRAM_SIZE],
             ppu: PPU::new(interrupt_flag.clone()),
             joypad: Joypad::new(),
-            timer: Timer::new(),
+            timer: Timer::new(interrupt_flag.clone()),
             serial: Serial::new(print_serial),
             cartridge,
 
