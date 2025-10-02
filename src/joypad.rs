@@ -1,4 +1,14 @@
-use crate::utils::is_set;
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{
+    mmu::InterruptFlag,
+    utils::{is_set, reset_bit, set_bit},
+};
+
+pub enum GBButton {
+    Dpad(JoypadDpad),
+    Button(JoypadButton),
+}
 
 pub enum JoypadDpad {
     Up = 2,
@@ -7,9 +17,9 @@ pub enum JoypadDpad {
     Right = 0,
 }
 
-pub enum JoypadButtons {
+pub enum JoypadButton {
     Start = 3,
-    Select = 4,
+    Select = 2,
     A = 0,
     B = 1,
 }
@@ -20,15 +30,19 @@ pub struct Joypad {
 
     dpad: u8,
     buttons: u8,
+
+    interrupt_flag: Rc<RefCell<u8>>,
 }
 
 impl Joypad {
-    pub fn new() -> Self {
+    pub fn new(interrupt_flag: Rc<RefCell<u8>>) -> Self {
         Joypad {
             select_buttons: false,
             select_dpad: false,
             dpad: 0xFF,
             buttons: 0xFF,
+
+            interrupt_flag,
         }
     }
 
@@ -45,5 +59,29 @@ impl Joypad {
     pub fn write(&mut self, byte: u8) {
         self.select_buttons = !is_set(byte, 5);
         self.select_dpad = !is_set(byte, 4);
+    }
+
+    pub fn on_button_press(&mut self, button: GBButton) {
+        match button {
+            GBButton::Dpad(joypad_dpad) => self.dpad = reset_bit(self.dpad, joypad_dpad as u8),
+            GBButton::Button(joypad_button) => {
+                self.buttons = reset_bit(self.buttons, joypad_button as u8)
+            }
+        }
+
+        *self.interrupt_flag.borrow_mut() =
+            set_bit(*self.interrupt_flag.borrow(), InterruptFlag::Joypad as u8);
+    }
+
+    pub fn on_button_release(&mut self, button: GBButton) {
+        match button {
+            GBButton::Dpad(joypad_dpad) => self.dpad = set_bit(self.dpad, joypad_dpad as u8),
+            GBButton::Button(joypad_button) => {
+                self.buttons = set_bit(self.buttons, joypad_button as u8)
+            }
+        }
+
+        *self.interrupt_flag.borrow_mut() =
+            set_bit(*self.interrupt_flag.borrow(), InterruptFlag::Joypad as u8);
     }
 }
