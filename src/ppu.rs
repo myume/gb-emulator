@@ -1,4 +1,10 @@
-use crate::{cpu::Cycles, utils::is_set};
+use std::{cell::RefCell, rc::Rc};
+
+use crate::{
+    cpu::Cycles,
+    mmu::InterruptFlag,
+    utils::{is_set, reset_bit, set_bit},
+};
 
 const OAM_BASE_ADDRESS: u16 = 0xFE00;
 const OAM_END_ADDRESS: u16 = 0xFE9F;
@@ -26,7 +32,16 @@ enum LCDCBits {
     BgWindowEnable = 0,
 }
 
-#[derive(Clone, Copy)]
+enum STATFlags {
+    LYCSelect = 6,
+    Mode2Select = 5,
+    Mode1Select = 4,
+    Mode0Select = 3,
+    LycEqLy = 2,
+    PPUMode = 1, // bits 0 and 1
+}
+
+#[derive(Clone, Copy, PartialEq)]
 enum PPUMode {
     HBlank = 0, // Mode0
     VBlank = 1, // Mode1
@@ -91,10 +106,11 @@ pub struct PPU {
     frame: [Color; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
 
     palette: [Color; 4],
+    interrupt_flag: Rc<RefCell<u8>>,
 }
 
 impl PPU {
-    pub fn new() -> Self {
+    pub fn new(interrupt_flag: Rc<RefCell<u8>>) -> Self {
         PPU {
             mode_clock: 0,
             mode: PPUMode::OAM,
@@ -120,6 +136,7 @@ impl PPU {
 
             frame: [MONOCHROME_PALETTE[0]; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
             palette: MONOCHROME_PALETTE,
+            interrupt_flag,
         }
     }
 
@@ -167,6 +184,20 @@ impl PPU {
         }
     }
 
+    fn set_ly(&mut self, val: u8) {
+        self.ly = val;
+
+        if self.ly == self.lyc {
+            self.stat = set_bit(self.stat, STATFlags::LycEqLy as u8);
+            if is_set(self.stat, STATFlags::LYCSelect as u8) {
+                *self.interrupt_flag.borrow_mut() =
+                    set_bit(*self.interrupt_flag.borrow(), InterruptFlag::LCD as u8);
+            }
+        } else {
+            self.stat = reset_bit(self.stat, STATFlags::LycEqLy as u8);
+        }
+    }
+
     pub fn tick(&mut self, cycles: Cycles) {
         self.mode_clock = self.mode_clock + cycles;
 
@@ -189,7 +220,7 @@ impl PPU {
 
                     self.draw_scanline();
 
-                    self.ly += 1;
+                    self.set_ly(self.ly + 1);
                     if self.ly as usize == GB_SCREEN_HEIGHT {
                         self.change_mode(PPUMode::VBlank);
                     } else {
@@ -200,11 +231,11 @@ impl PPU {
             PPUMode::VBlank => {
                 if self.mode_clock >= VBLANK_CYCLE_LENGTH {
                     self.mode_clock %= VBLANK_CYCLE_LENGTH;
-                    self.ly += 1;
+                    self.set_ly(self.ly + 1);
 
                     if self.ly as usize == TOTAL_SCANLINES {
+                        self.set_ly(0);
                         self.change_mode(PPUMode::OAM);
-                        self.ly = 0;
                     }
                 }
             }
@@ -212,8 +243,22 @@ impl PPU {
     }
 
     fn change_mode(&mut self, new_mode: PPUMode) {
-        self.stat = self.stat & 0b11111100 | new_mode as u8;
+        self.stat = self.stat & 0b11111100;
+        if is_set(self.lcdc, LCDCBits::LCDEnable as u8) {
+            self.stat |= new_mode as u8;
+        }
         self.mode = new_mode;
+
+        // Request VBlank interrupt
+        if new_mode == PPUMode::VBlank {
+            *self.interrupt_flag.borrow_mut() =
+                set_bit(*self.interrupt_flag.borrow(), InterruptFlag::VBlank as u8);
+        }
+
+        if self.mode != PPUMode::VRAM && is_set(*self.interrupt_flag.borrow(), self.mode as u8) {
+            *self.interrupt_flag.borrow_mut() =
+                set_bit(*self.interrupt_flag.borrow(), InterruptFlag::LCD as u8);
+        }
     }
 
     fn draw_scanline(&mut self) {
@@ -413,7 +458,8 @@ mod test {
 
     #[test]
     fn test_draw_pixels() {
-        let mut ppu = PPU::new();
+        let intflag = Rc::new(RefCell::new(0));
+        let mut ppu = PPU::new(intflag.clone());
         let palettte = 0b11100100;
         ppu.draw_pixels(0, 0b0010111111111000, 0, 8, palettte, None);
 
@@ -422,7 +468,7 @@ mod test {
             [0b00, 0b10, 0b11, 0b11, 0b11, 0b11, 0b10, 0b00].map(|id| MONOCHROME_PALETTE[id])
         );
 
-        let mut ppu = PPU::new();
+        let mut ppu = PPU::new(intflag.clone());
         ppu.draw_pixels(0, 0b0010111111111000, 0, 2, palettte, None);
 
         assert_eq!(

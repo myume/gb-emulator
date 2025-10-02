@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     cartridge::Cartridge, cpu::Cycles, joypad::Joypad, ppu::PPU, serial::Serial, timer::Timer,
     utils::compose_bytes,
@@ -10,7 +12,7 @@ pub struct MMU {
     wram: [u8; WRAM_SIZE],
     hram: [u8; HRAM_SIZE],
     pub interrupt_enable: u8,
-    pub interrupt_flag: u8,
+    pub interrupt_flag: Rc<RefCell<u8>>,
 
     pub ppu: PPU,
     pub joypad: Joypad,
@@ -22,18 +24,28 @@ pub struct MMU {
     test_ram: [u8; 0xFFFF + 1],
 }
 
+pub enum InterruptFlag {
+    Joypad = 4,
+    Serial = 3,
+    Timer = 2,
+    LCD = 1,
+    VBlank = 0,
+}
+
 impl MMU {
     pub fn new(cartridge: Cartridge, print_serial: bool) -> Self {
+        let interrupt_flag = Rc::new(RefCell::new(0));
         MMU {
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
-            interrupt_enable: 0,
-            interrupt_flag: 0,
-            ppu: PPU::new(),
+            ppu: PPU::new(interrupt_flag.clone()),
             joypad: Joypad::new(),
             timer: Timer::new(),
             serial: Serial::new(print_serial),
             cartridge,
+
+            interrupt_enable: 0,
+            interrupt_flag,
 
             #[cfg(feature = "test")]
             test_ram: [0; 0xFFFF + 1],
@@ -60,7 +72,7 @@ impl MMU {
             // Not usable
             0xFEA0..=0xFEFF => 0xFF,
             // Interrupt flag (IF)
-            0xFF0F => self.interrupt_flag,
+            0xFF0F => *self.interrupt_flag.borrow(),
             // LCD control and flags
             0xFF40..=0xFF4B => self.ppu.read_byte(address),
             // I/O Registers
@@ -103,7 +115,7 @@ impl MMU {
             // LCD control and flags
             0xFF40..=0xFF4B => self.ppu.write_byte(address, byte),
             // Interrupt flag (IF)
-            0xFF0F => self.interrupt_flag = byte,
+            0xFF0F => *self.interrupt_flag.borrow_mut() = byte,
             // I/O Registers
             0xFF00 => self.joypad.write(byte),
             0xFF01..=0xFF02 => self.serial.write_byte(address, byte),
