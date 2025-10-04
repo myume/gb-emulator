@@ -92,8 +92,8 @@ impl Timer {
 
                 if self.tima.wrapping_add(1) < self.tima {
                     self.tima = self.tma;
-                    *self.interrupt_flag.borrow_mut() =
-                        set_bit(*self.interrupt_flag.borrow(), InterruptFlag::Timer as u8);
+                    let flag = *self.interrupt_flag.borrow();
+                    *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::Timer as u8);
                 } else {
                     self.tima = self.tima.wrapping_add(1);
                 }

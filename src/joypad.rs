@@ -69,8 +69,8 @@ impl Joypad {
             }
         }
 
-        *self.interrupt_flag.borrow_mut() =
-            set_bit(*self.interrupt_flag.borrow(), InterruptFlag::Joypad as u8);
+        let flag = *self.interrupt_flag.borrow();
+        *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::Joypad as u8);
     }
 
     pub fn on_button_release(&mut self, button: GBButton) {
@@ -81,7 +81,7 @@ impl Joypad {
             }
         }
 
-        *self.interrupt_flag.borrow_mut() =
-            set_bit(*self.interrupt_flag.borrow(), InterruptFlag::Joypad as u8);
+        let flag = *self.interrupt_flag.borrow();
+        *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::Joypad as u8);
     }
 }

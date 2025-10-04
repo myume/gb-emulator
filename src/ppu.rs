@@ -190,8 +190,8 @@ impl PPU {
         if self.ly == self.lyc {
             self.stat = set_bit(self.stat, STATFlags::LycEqLy as u8);
             if is_set(self.stat, STATFlags::LYCSelect as u8) {
-                *self.interrupt_flag.borrow_mut() =
-                    set_bit(*self.interrupt_flag.borrow(), InterruptFlag::LCD as u8);
+                let flag = *self.interrupt_flag.borrow();
+                *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::LCD as u8);
             }
         } else {
             self.stat = reset_bit(self.stat, STATFlags::LycEqLy as u8);
@@ -251,13 +251,13 @@ impl PPU {
 
         // Request VBlank interrupt
         if new_mode == PPUMode::VBlank {
-            *self.interrupt_flag.borrow_mut() =
-                set_bit(*self.interrupt_flag.borrow(), InterruptFlag::VBlank as u8);
+            let flag = *self.interrupt_flag.borrow();
+            *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::VBlank as u8);
         }
 
         if self.mode != PPUMode::VRAM && is_set(*self.interrupt_flag.borrow(), self.mode as u8) {
-            *self.interrupt_flag.borrow_mut() =
-                set_bit(*self.interrupt_flag.borrow(), InterruptFlag::LCD as u8);
+            let flag = *self.interrupt_flag.borrow();
+            *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::LCD as u8);
         }
     }
 
