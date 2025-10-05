@@ -1,4 +1,4 @@
-use crate::utils::compose_bytes;
+use crate::{mmu::InterruptFlag, utils::compose_bytes};
 use paste::paste;
 
 pub type Cycles = usize;
@@ -23,6 +23,7 @@ impl CPU {
     pub fn set_ime(&mut self, set: bool) {
         self.ime = set;
     }
+
     pub fn get_ime(&self) -> bool {
         self.ime
     }

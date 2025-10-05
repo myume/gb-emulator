@@ -24,12 +24,27 @@ pub struct MMU {
     test_ram: [u8; 0xFFFF + 1],
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum InterruptFlag {
     Joypad = 4,
     Serial = 3,
     Timer = 2,
     LCD = 1,
     VBlank = 0,
+}
+
+impl InterruptFlag {
+    pub fn iter() -> impl Iterator<Item = InterruptFlag> {
+        [
+            InterruptFlag::VBlank,
+            InterruptFlag::LCD,
+            InterruptFlag::Timer,
+            InterruptFlag::Serial,
+            InterruptFlag::Joypad,
+        ]
+        .iter()
+        .copied()
+    }
 }
 
 impl MMU {
