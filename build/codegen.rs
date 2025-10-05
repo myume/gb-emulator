@@ -920,11 +920,10 @@ fn handle_halt(entry: &OpcodeEntry) -> TokenStream {
 fn handle_cb(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "PREFIX");
     let bytes = entry.bytes;
-    let cycles = entry.cycles[0];
     quote! {
         self.cpu.registers.set_pc(self.cpu.registers.pc().wrapping_add(#bytes));
         let opcode = self.mmu.read_byte(self.cpu.registers.pc());
-        #cycles + self.execute_cb_opcode(opcode)
+        self.execute_cb_opcode(opcode)
     }
 }
 

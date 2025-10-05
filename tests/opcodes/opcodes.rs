@@ -1,4 +1,5 @@
 use paste::paste;
+use serde_json::Value;
 use std::{
     fs::{File, read_dir},
     io::BufReader,
@@ -21,6 +22,7 @@ pub struct TestCase {
     initial: GBState,
     #[serde(rename = "final")]
     expected: GBState,
+    cycles: Vec<Vec<Value>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -98,7 +100,12 @@ fn initialize_test(initial: &GBState) -> GameBoy {
     GameBoy { cpu, mmu }
 }
 
-fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
+fn validate_test(
+    expected: &GBState,
+    expected_cycles: usize,
+    gb: &GameBoy,
+    cycles: usize,
+) -> Result<(), Failed> {
     macro_rules! validate_register {
         ($($r:ident),*) => {
             paste! {
@@ -144,6 +151,13 @@ fn validate_test(expected: &GBState, gb: &GameBoy) -> Result<(), Failed> {
         }
     }
 
+    if cycles != expected_cycles {
+        return Err(Failed::from(format!(
+            "Expected number of cycles to be {} found {}",
+            expected_cycles, cycles
+        )));
+    }
+
     Ok(())
 }
 
@@ -152,7 +166,13 @@ fn test_opcode(test_case: TestCase) -> Result<(), Failed> {
 
     let opcode = u8::from_str_radix(test_case.name.split(" ").collect::<Vec<&str>>()[0], 16)
         .expect(&format!("Invalid opcode in {}", test_case.name));
-    gb.execute_opcode(opcode);
 
-    validate_test(&test_case.expected, &gb)
+    let cycles = gb.execute_opcode(opcode);
+    let expected_cycles = if opcode == 0x10 || opcode == 0x76 {
+        cycles
+    } else {
+        test_case.cycles.len() * 4
+    };
+
+    validate_test(&test_case.expected, expected_cycles, &gb, cycles)
 }
