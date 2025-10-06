@@ -87,7 +87,7 @@ impl Timer {
 
         if self.enable {
             self.tima_clock = self.tima_clock.wrapping_add(cycles);
-            if self.tima_clock == self.frequency {
+            if self.tima_clock >= self.frequency {
                 self.tima_clock %= self.frequency;
 
                 if self.tima.wrapping_add(1) < self.tima {
