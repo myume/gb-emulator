@@ -1,8 +1,14 @@
-use std::{path::PathBuf, process::exit};
+use std::{
+    path::PathBuf,
+    process::exit,
+    thread,
+    time::{Duration, Instant},
+};
 
 use clap::Parser;
 use gb_emulator::{
     cartridge::Cartridge,
+    cpu::Cycles,
     gb::GameBoy,
     ppu::{GB_SCREEN_HEIGHT, GB_SCREEN_WIDTH},
 };
@@ -22,6 +28,12 @@ pub struct Args {
     #[arg(short, long)]
     pub print_serial: bool,
 }
+
+// Game Boy hardware constants
+const CPU_CYCLES_PER_SECOND: u32 = 4_194_304;
+const FPS: u32 = 60;
+const CYCLES_PER_FRAME: u32 = (CPU_CYCLES_PER_SECOND as f64 / FPS as f64) as u32;
+const FRAME_DURATION: Duration = Duration::from_nanos((1_000_000_000u32 / FPS) as u64);
 
 fn get_screen_rect(win_w: u32, win_h: u32) -> Rect {
     let gb_aspect_ratio = GB_SCREEN_WIDTH as f32 / GB_SCREEN_HEIGHT as f32;
@@ -66,7 +78,7 @@ fn main() {
         .position_centered()
         .resizable()
         .build()
-        .expect("Failed to create window");
+        .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
     let (win_w, win_h) = canvas.window().size();
@@ -84,7 +96,11 @@ fn main() {
         .expect("Failed to create texture");
 
     let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut cycles_counter: Cycles = 0;
+
     'running: loop {
+        let frame_start_time = Instant::now();
+
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -102,7 +118,16 @@ fn main() {
             }
         }
 
-        gb.tick();
+        while cycles_counter < CYCLES_PER_FRAME as Cycles {
+            cycles_counter += gb.tick();
+        }
+        cycles_counter %= CYCLES_PER_FRAME as Cycles;
+
+        let elapsed = frame_start_time.elapsed();
+        if let Some(sleep_duration) = FRAME_DURATION.checked_sub(elapsed) {
+            thread::sleep(sleep_duration);
+        }
+
         texture
             .update(None, gb.pixel_data(), GB_SCREEN_WIDTH * 4)
             .expect("Failed to update texture");
