@@ -351,9 +351,9 @@ impl PPU {
             0x9000
         };
 
-        let tile_y = (self.scy as usize + self.ly as usize % 256) as usize / BASE_TILE_WIDTH;
+        let tile_y = ((self.scy as usize + self.ly as usize) % 256) as usize / BASE_TILE_WIDTH;
         let tile_pixel_offset_y =
-            (self.scy as usize + self.ly as usize % 256) as u16 % BASE_TILE_WIDTH as u16;
+            ((self.scy as usize + self.ly as usize) % 256) as u16 % BASE_TILE_WIDTH as u16;
 
         let mut pixels_drawn = 0;
         while pixels_drawn < GB_SCREEN_WIDTH {
