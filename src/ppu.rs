@@ -261,16 +261,18 @@ impl PPU {
     }
 
     fn draw_scanline(&mut self) {
-        self.draw_bg();
-        self.draw_window();
-        self.draw_sprites();
+        if is_set(self.lcdc, LCDCBits::BgWindowEnable as u8) {
+            self.draw_bg();
+            if is_set(self.lcdc, LCDCBits::WindowEnable as u8) {
+                self.draw_window();
+            }
+        }
+        if is_set(self.lcdc, LCDCBits::OBJEnable as u8) {
+            self.draw_sprites();
+        }
     }
 
     fn draw_sprites(&mut self) {
-        if !is_set(self.lcdc, LCDCBits::OBJEnable as u8) {
-            return;
-        }
-
         let relative_ly = self.ly + 16;
 
         let obj_size = if is_set(self.lcdc, LCDCBits::OBJSize as u8) {
@@ -405,11 +407,7 @@ impl PPU {
         res
     }
 
-    fn draw_window(&mut self) {
-        if !is_set(self.lcdc, LCDCBits::WindowEnable as u8) {
-            return;
-        }
-    }
+    fn draw_window(&mut self) {}
 
     fn draw_pixels(
         &mut self,
