@@ -913,6 +913,9 @@ fn handle_halt(entry: &OpcodeEntry) -> TokenStream {
     assert!(entry.mnemonic == "HALT");
     quote! {
         self.cpu.halted = true;
+        if !self.cpu.get_ime() &&self.mmu.interrupt_enable & *self.mmu.interrupt_flag.borrow() != 0 {
+            self.cpu.halt_bug = true;
+        }
     }
 }
 

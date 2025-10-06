@@ -23,16 +23,37 @@ impl GameBoy {
         self.print_registers();
 
         let mut cycles = 0;
+        if self.cpu.halted {
+            if self.cpu.get_ime() {
+                self.cpu.halted = false;
+            } else {
+                let pending_interrupt =
+                    self.mmu.interrupt_enable & *self.mmu.interrupt_flag.borrow() != 0;
+                if pending_interrupt {
+                    self.cpu.halted = false;
+                } else {
+                    cycles = 4;
+                }
+            }
+        }
+
         cycles += self.handle_interrupts();
 
-        let opcode = self.mmu.read_byte(self.cpu.registers.pc());
-        cycles += self.execute_opcode(opcode);
-        self.mmu.tick(cycles);
+        if !self.cpu.halted {
+            let opcode = self.mmu.read_byte(self.cpu.registers.pc());
+            if self.cpu.halt_bug {
+                self.cpu.registers.set_pc(self.cpu.registers.pc() - 1);
+                self.cpu.halt_bug = false;
+            }
+            cycles += self.execute_opcode(opcode);
 
-        if self.cpu.ei && opcode != 0xFB {
-            self.cpu.set_ime(true);
-            self.cpu.ei = false;
+            if self.cpu.ei && opcode != 0xFB {
+                self.cpu.set_ime(true);
+                self.cpu.ei = false;
+            }
         }
+
+        self.mmu.tick(cycles);
 
         cycles
     }

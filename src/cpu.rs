@@ -1,4 +1,4 @@
-use crate::{mmu::InterruptFlag, utils::compose_bytes};
+use crate::utils::compose_bytes;
 use paste::paste;
 
 pub type Cycles = usize;
@@ -8,6 +8,7 @@ pub struct CPU {
     ime: bool, // ime flag
     pub ei: bool,
     pub halted: bool,
+    pub halt_bug: bool,
 }
 
 impl CPU {
@@ -17,6 +18,7 @@ impl CPU {
             ime: false,
             ei: false,
             halted: false,
+            halt_bug: false,
         }
     }
 
