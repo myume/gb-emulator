@@ -249,14 +249,13 @@ impl PPU {
         }
         self.mode = new_mode;
 
+        let flag = *self.interrupt_flag.borrow();
         // Request VBlank interrupt
         if new_mode == PPUMode::VBlank {
-            let flag = *self.interrupt_flag.borrow();
             *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::VBlank as u8);
         }
 
-        if self.mode != PPUMode::VRAM && is_set(*self.interrupt_flag.borrow(), self.mode as u8) {
-            let flag = *self.interrupt_flag.borrow();
+        if self.mode != PPUMode::VRAM && is_set(self.stat, self.mode as u8 + 3) {
             *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::LCD as u8);
         }
     }
