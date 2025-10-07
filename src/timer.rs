@@ -88,16 +88,61 @@ impl Timer {
         if self.enable {
             self.tima_clock = self.tima_clock.wrapping_add(cycles);
             if self.tima_clock >= self.frequency {
+                let tima_cycles = (self.tima_clock / self.frequency) as u8;
                 self.tima_clock %= self.frequency;
 
-                if self.tima.wrapping_add(1) < self.tima {
+                if self.tima.checked_add(tima_cycles) == None {
                     self.tima = self.tma;
                     let flag = *self.interrupt_flag.borrow();
                     *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::Timer as u8);
                 } else {
-                    self.tima = self.tima.wrapping_add(1);
+                    self.tima += tima_cycles;
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{cell::RefCell, rc::Rc};
+
+    use crate::{mmu::InterruptFlag, timer::Timer, utils::is_set};
+
+    #[test]
+    fn tima_overflow() {
+        let interrupt_flag = Rc::new(RefCell::new(0));
+        let mut timer = Timer::new(interrupt_flag.clone());
+
+        timer.write_byte(0xFF07, 0x05);
+
+        timer.tick(4);
+
+        assert!(!is_set(
+            *interrupt_flag.borrow(),
+            InterruptFlag::Timer as u8
+        ));
+        assert_eq!(timer.read_byte(0xFF05), 0);
+
+        timer.tick(12); // incremented in total 4 M cycles
+
+        assert!(!is_set(
+            *interrupt_flag.borrow(),
+            InterruptFlag::Timer as u8
+        ));
+        assert_eq!(timer.read_byte(0xFF05), 1);
+
+        timer.tick(16 * 0xFE);
+
+        assert!(!is_set(
+            *interrupt_flag.borrow(),
+            InterruptFlag::Timer as u8
+        ));
+        assert_eq!(timer.read_byte(0xFF05), 255);
+
+        timer.tick(16);
+
+        assert!(is_set(*interrupt_flag.borrow(), InterruptFlag::Timer as u8));
+        assert_eq!(timer.read_byte(0xFF05), 0);
     }
 }
