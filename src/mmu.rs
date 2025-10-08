@@ -11,6 +11,8 @@ const HRAM_SIZE: usize = 0xFFFF - 0xFF80;
 pub struct MMU {
     wram: [u8; WRAM_SIZE],
     hram: [u8; HRAM_SIZE],
+
+    stub_audio: [u8; 0xFF26 - 0xFF10 + 1], // TODO: remove this when implemented audio
     pub interrupt_enable: u8,
     pub interrupt_flag: Rc<RefCell<u8>>,
 
@@ -53,6 +55,7 @@ impl MMU {
         MMU {
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
+            stub_audio: [0; 0xFF26 - 0xFF10 + 1],
             ppu: PPU::new(interrupt_flag.clone()),
             joypad: Joypad::new(interrupt_flag.clone()),
             timer: Timer::new(interrupt_flag.clone()),
@@ -94,6 +97,7 @@ impl MMU {
             0xFF00 => self.joypad.read(),
             0xFF01..=0xFF02 => self.serial.read_byte(address),
             0xFF04..=0xFF07 => self.timer.read_byte(address),
+            0xFF10..=0xFF26 => self.stub_audio[(address - 0xFF10) as usize],
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize],
             // Interrupt Enable register (IE)
@@ -135,6 +139,7 @@ impl MMU {
             0xFF00 => self.joypad.write(byte),
             0xFF01..=0xFF02 => self.serial.write_byte(address, byte),
             0xFF04..=0xFF07 => self.timer.write_byte(address, byte),
+            0xFF10..=0xFF26 => self.stub_audio[(address - 0xFF10) as usize] = byte,
             // HRAM (high RAM)
             0xFF80..=0xFFFE => self.hram[(address - 0xFF80) as usize] = byte,
             // Interrupt Enable register (IE)
