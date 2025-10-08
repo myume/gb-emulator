@@ -9,7 +9,7 @@ use clap::Parser;
 use gb_emulator::{
     cartridge::Cartridge,
     cpu::Cycles,
-    gb::GameBoy,
+    gb::{GBButton, GameBoy, JoypadButton, JoypadDpad},
     ppu::{GB_SCREEN_HEIGHT, GB_SCREEN_WIDTH},
 };
 use sdl2::{
@@ -108,6 +108,81 @@ fn main() {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+
+                // up down left right
+                Event::KeyDown {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => gb.on_button_press(GBButton::Dpad(JoypadDpad::Up)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => gb.on_button_release(GBButton::Dpad(JoypadDpad::Up)),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::S),
+                    ..
+                } => gb.on_button_press(GBButton::Dpad(JoypadDpad::Down)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::S),
+                    ..
+                } => gb.on_button_release(GBButton::Dpad(JoypadDpad::Down)),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => gb.on_button_press(GBButton::Dpad(JoypadDpad::Left)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => gb.on_button_release(GBButton::Dpad(JoypadDpad::Left)),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::D),
+                    ..
+                } => gb.on_button_press(GBButton::Dpad(JoypadDpad::Right)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::D),
+                    ..
+                } => gb.on_button_release(GBButton::Dpad(JoypadDpad::Right)),
+
+                // start select A B
+                Event::KeyDown {
+                    keycode: Some(Keycode::I),
+                    ..
+                } => gb.on_button_press(GBButton::Button(JoypadButton::Start)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::I),
+                    ..
+                } => gb.on_button_release(GBButton::Button(JoypadButton::Start)),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::O),
+                    ..
+                } => gb.on_button_press(GBButton::Button(JoypadButton::Select)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::O),
+                    ..
+                } => gb.on_button_release(GBButton::Button(JoypadButton::Select)),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::J),
+                    ..
+                } => gb.on_button_press(GBButton::Button(JoypadButton::A)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::J),
+                    ..
+                } => gb.on_button_release(GBButton::Button(JoypadButton::A)),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::K),
+                    ..
+                } => gb.on_button_press(GBButton::Button(JoypadButton::B)),
+                Event::KeyUp {
+                    keycode: Some(Keycode::K),
+                    ..
+                } => gb.on_button_release(GBButton::Button(JoypadButton::B)),
+
                 Event::Window {
                     win_event: WindowEvent::Resized(w, h),
                     ..
@@ -139,4 +214,3 @@ fn main() {
         canvas.present();
     }
 }
-

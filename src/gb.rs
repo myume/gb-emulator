@@ -5,6 +5,28 @@ use crate::{
     utils::{is_set, reset_bit},
 };
 
+#[derive(Debug, Clone, Copy)]
+pub enum JoypadDpad {
+    Up = 2,
+    Down = 3,
+    Left = 1,
+    Right = 0,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum JoypadButton {
+    Start = 3,
+    Select = 2,
+    A = 0,
+    B = 1,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum GBButton {
+    Dpad(JoypadDpad),
+    Button(JoypadButton),
+}
+
 pub struct GameBoy {
     pub cpu: CPU,
     pub mmu: MMU,
@@ -128,5 +150,13 @@ impl GameBoy {
             self.mmu.read_byte(self.cpu.registers.pc() + 2),
             self.mmu.read_byte(self.cpu.registers.pc() + 3),
         );
+    }
+
+    pub fn on_button_press(&mut self, button: GBButton) {
+        self.mmu.joypad.on_button_press(button);
+    }
+
+    pub fn on_button_release(&mut self, button: GBButton) {
+        self.mmu.joypad.on_button_release(button);
     }
 }

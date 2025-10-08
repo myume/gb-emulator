@@ -1,28 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+    gb::GBButton,
     mmu::InterruptFlag,
     utils::{is_set, reset_bit, set_bit},
 };
-
-pub enum GBButton {
-    Dpad(JoypadDpad),
-    Button(JoypadButton),
-}
-
-pub enum JoypadDpad {
-    Up = 2,
-    Down = 3,
-    Left = 1,
-    Right = 0,
-}
-
-pub enum JoypadButton {
-    Start = 3,
-    Select = 2,
-    A = 0,
-    B = 1,
-}
 
 pub struct Joypad {
     select_buttons: bool,
