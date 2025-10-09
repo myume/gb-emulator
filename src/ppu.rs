@@ -6,9 +6,9 @@ use crate::{
     utils::{is_set, reset_bit, set_bit},
 };
 
-const OAM_BASE_ADDRESS: u16 = 0xFE00;
+pub const OAM_BASE_ADDRESS: u16 = 0xFE00;
 const OAM_END_ADDRESS: u16 = 0xFE9F;
-const OAM_SIZE: usize = OAM_END_ADDRESS as usize - OAM_BASE_ADDRESS as usize + 1;
+pub const OAM_SIZE: usize = OAM_END_ADDRESS as usize - OAM_BASE_ADDRESS as usize + 1;
 
 const VRAM_BASE_ADDRESS: u16 = 0x8000;
 const VRAM_END_ADDRESS: u16 = 0x9FFF;
@@ -81,8 +81,6 @@ pub struct PPU {
     vram: [u8; VRAM_SIZE],
     oam: [u8; OAM_SIZE],
 
-    dma: u8, // OAM DMA source address & start
-
     lcdc: u8, // LCD control
 
     ly: u8,   // LCD Y coordinate [read-only]
@@ -116,7 +114,6 @@ impl PPU {
             mode: PPUMode::OAM,
             oam: [0; OAM_SIZE],
             vram: [0; VRAM_SIZE],
-            dma: 0,
 
             lcdc: 0,
 
@@ -154,7 +151,6 @@ impl PPU {
                 self.ly
             }
             0xFF45 => self.lyc,
-            0xFF46 => self.dma,
             0xFF47 => self.bgp,
             0xFF48 => self.obp0,
             0xFF49 => self.obp1,
@@ -174,7 +170,6 @@ impl PPU {
             0xFF43 => self.scx = byte,
             0xFF44 => self.ly = byte,
             0xFF45 => self.lyc = byte,
-            0xFF46 => self.dma = byte,
             0xFF47 => self.bgp = byte,
             0xFF48 => self.obp0 = byte,
             0xFF49 => self.obp1 = byte,

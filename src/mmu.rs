@@ -1,7 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    cartridge::Cartridge, cpu::Cycles, joypad::Joypad, ppu::PPU, serial::Serial, timer::Timer,
+    cartridge::Cartridge,
+    cpu::Cycles,
+    joypad::Joypad,
+    ppu::{OAM_BASE_ADDRESS, OAM_SIZE, PPU},
+    serial::Serial,
+    timer::Timer,
     utils::compose_bytes,
 };
 
@@ -11,6 +16,7 @@ const HRAM_SIZE: usize = 0xFFFF - 0xFF80;
 pub struct MMU {
     wram: [u8; WRAM_SIZE],
     hram: [u8; HRAM_SIZE],
+    dma: u8, // OAM DMA source address & start
 
     stub_audio: [u8; 0xFF26 - 0xFF10 + 1], // TODO: remove this when implemented audio
     pub interrupt_enable: u8,
@@ -55,6 +61,7 @@ impl MMU {
         MMU {
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
+            dma: 0,
             stub_audio: [0; 0xFF26 - 0xFF10 + 1],
             ppu: PPU::new(interrupt_flag.clone()),
             joypad: Joypad::new(interrupt_flag.clone()),
@@ -92,6 +99,7 @@ impl MMU {
             // Interrupt flag (IF)
             0xFF0F => *self.interrupt_flag.borrow(),
             // LCD control and flags
+            0xFF46 => self.dma,
             0xFF40..=0xFF4B => self.ppu.read_byte(address),
             // I/O Registers
             0xFF00 => self.joypad.read(),
@@ -131,6 +139,15 @@ impl MMU {
             0xFE00..=0xFE9F => self.ppu.write_byte(address, byte),
             // Not usable
             0xFEA0..=0xFEFF => {}
+            // OAM DMA Transfer
+            0xFF46 => {
+                self.dma = byte;
+                let source_address = self.dma as u16 * 0x100;
+                for i in 0..OAM_SIZE {
+                    let copied_byte = self.read_byte(source_address + i as u16);
+                    self.write_byte(OAM_BASE_ADDRESS + i as u16, copied_byte);
+                }
+            }
             // LCD control and flags
             0xFF40..=0xFF4B => self.ppu.write_byte(address, byte),
             // Interrupt flag (IF)
