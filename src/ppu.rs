@@ -285,8 +285,9 @@ impl PPU {
             } else {
                 0
             };
+
             // should be 0 when x is 0 or when x >= 168.
-            let pixels_to_draw = x.max((GB_SCREEN_WIDTH + BASE_TILE_WIDTH) as u8) - x_start;
+            let pixels_to_draw = x.min((GB_SCREEN_WIDTH + BASE_TILE_WIDTH) as u8) - x_start;
 
             if y <= relative_ly && relative_ly < y + obj_size && pixels_to_draw > 0 {
                 let tile_index = self.read_byte(sprite_address + 2);
@@ -307,8 +308,8 @@ impl PPU {
                 if yflip {
                     line_within_tile = obj_size - line_within_tile - 1;
                 }
-                let line_offset = (line_within_tile * BYTES_PER_LINE as u8) as u16;
-                let tile_offset = (tile_index * BYTES_PER_TILE as u8) as u16;
+                let line_offset = line_within_tile as u16 * BYTES_PER_LINE as u16;
+                let tile_offset = tile_index as u16 * BYTES_PER_TILE as u16;
 
                 let address = VRAM_BASE_ADDRESS + tile_offset + line_offset;
 
@@ -323,7 +324,7 @@ impl PPU {
                 self.draw_pixels(
                     frame_base,
                     pixels,
-                    x_start.into(),
+                    x_start as usize % BASE_TILE_WIDTH,
                     pixels_to_draw.into(),
                     palette,
                     Some(priority),
