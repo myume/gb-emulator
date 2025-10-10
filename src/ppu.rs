@@ -289,8 +289,8 @@ impl PPU {
             // when sprite is visible
             if y <= relative_ly
                 && relative_ly < y + obj_size
-                && x_start > 0
-                && x_start <= GB_SCREEN_WIDTH as u8
+                && x > 0
+                && x_start < GB_SCREEN_WIDTH as u8
             {
                 let tile_index = self.read_byte(sprite_address + 2);
                 let sprite_flags = self.read_byte(sprite_address + 3);
@@ -326,8 +326,12 @@ impl PPU {
                 self.draw_pixels(
                     frame_base,
                     pixels,
-                    0, // always draw from beginning of sprite to end
-                    BASE_TILE_WIDTH,
+                    if x < BASE_TILE_WIDTH as u8 {
+                        BASE_TILE_WIDTH - x as usize
+                    } else {
+                        0
+                    },
+                    (x.min(GB_SCREEN_WIDTH as u8) - x_start) as usize,
                     palette,
                     Some(priority),
                 );
@@ -425,7 +429,14 @@ impl PPU {
                 continue;
             }
 
-            self.frame[frame_base + i] = self.get_color_from_palette(palette, color_index);
+            let color = self.get_color_from_palette(palette, color_index);
+            if priority.is_some() {
+                if color_index != 0 {
+                    self.frame[frame_base + i] = color;
+                }
+            } else {
+                self.frame[frame_base + i] = color;
+            }
         }
     }
 
