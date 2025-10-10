@@ -47,7 +47,8 @@ impl MBC for MBC3 {
         match address {
             0x0000..=0x3FFF => self.rom[address as usize],
             0x4000..=0x7FFF => {
-                self.rom[self.rom_bank_number as usize * ROM_BANK_SIZE + address as usize]
+                self.rom
+                    [(self.rom_bank_number.max(1) - 1) as usize * ROM_BANK_SIZE + address as usize]
             }
 
             0xA000..=0xBFFF => {

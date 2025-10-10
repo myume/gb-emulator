@@ -62,11 +62,12 @@ impl GameBoy {
         cycles += self.handle_interrupts();
 
         if !self.cpu.halted {
-            let opcode = self.mmu.read_byte(self.cpu.registers.pc());
             if self.cpu.halt_bug {
                 self.cpu.registers.set_pc(self.cpu.registers.pc() - 1);
                 self.cpu.halt_bug = false;
             }
+
+            let opcode = self.mmu.read_byte(self.cpu.registers.pc());
             cycles += self.execute_opcode(opcode);
 
             if self.cpu.ei && opcode != 0xFB {
