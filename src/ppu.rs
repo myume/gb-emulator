@@ -286,10 +286,12 @@ impl PPU {
                 0
             };
 
-            // should be 0 when x is 0 or when x >= 168.
-            let pixels_to_draw = x.min((GB_SCREEN_WIDTH + BASE_TILE_WIDTH) as u8) - x_start;
-
-            if y <= relative_ly && relative_ly < y + obj_size && pixels_to_draw > 0 {
+            // when sprite is visible
+            if y <= relative_ly
+                && relative_ly < y + obj_size
+                && x_start > 0
+                && x_start <= GB_SCREEN_WIDTH as u8
+            {
                 let tile_index = self.read_byte(sprite_address + 2);
                 let sprite_flags = self.read_byte(sprite_address + 3);
 
@@ -324,8 +326,8 @@ impl PPU {
                 self.draw_pixels(
                     frame_base,
                     pixels,
-                    x_start as usize % BASE_TILE_WIDTH,
-                    pixels_to_draw.into(),
+                    0, // always draw from beginning of sprite to end
+                    BASE_TILE_WIDTH,
                     palette,
                     Some(priority),
                 );
@@ -359,14 +361,13 @@ impl PPU {
             let tile_index = tile_y * TILE_MAP_WIDTH + tile_x;
             let bg_index = self.read_byte(bg_map + tile_index as u16);
 
-            let bg_address = bg_data
-                + if tile_data_flag {
-                    // 8000 method
-                    bg_index as u16
-                } else {
-                    // 8800 method
-                    bg_index as i8 as i16 as u16
-                } * BYTES_PER_TILE as u16; // mutiple index by number of bytes per tile to get correct address
+            let bg_address = if tile_data_flag {
+                // 8000 method
+                bg_data + bg_index as u16 * BYTES_PER_TILE as u16
+            } else {
+                // 8800 method
+                bg_data.wrapping_add((bg_index as i8 as i16 * BYTES_PER_TILE as i16) as u16)
+            };
 
             let pixels = PPU::compose_pixels(
                 self.read_byte(bg_address + tile_pixel_offset_y * BYTES_PER_LINE as u16),
