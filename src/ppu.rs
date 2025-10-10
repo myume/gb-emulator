@@ -276,7 +276,11 @@ impl PPU {
             8
         };
 
+        let mut num_sprites = 0;
         for sprite_address in (OAM_BASE_ADDRESS..=OAM_END_ADDRESS).step_by(BYTES_PER_SPRITE) {
+            if num_sprites == 10 {
+                break;
+            }
             let y = self.read_byte(sprite_address);
             let x = self.read_byte(sprite_address + 1);
 
@@ -292,6 +296,7 @@ impl PPU {
                 && x > 0
                 && x_start < GB_SCREEN_WIDTH as u8
             {
+                num_sprites += 1;
                 let tile_index = self.read_byte(sprite_address + 2);
                 let sprite_flags = self.read_byte(sprite_address + 3);
 
@@ -351,7 +356,7 @@ impl PPU {
         };
 
         let tile_data_flag = is_set(self.lcdc, LCDCBits::BgWindowTiles as u8);
-        let bg_data: u16 = if tile_data_flag {
+        let tile_data: u16 = if tile_data_flag {
             VRAM_BASE_ADDRESS
         } else {
             0x9000
@@ -369,17 +374,17 @@ impl PPU {
             let tile_index = tile_y * TILE_MAP_WIDTH + tile_x;
             let bg_index = self.read_byte(bg_map + tile_index as u16);
 
-            let bg_address = if tile_data_flag {
+            let tile_address = if tile_data_flag {
                 // 8000 method
-                bg_data + bg_index as u16 * BYTES_PER_TILE as u16
+                tile_data + bg_index as u16 * BYTES_PER_TILE as u16
             } else {
                 // 8800 method
-                bg_data.wrapping_add((bg_index as i8 as i16 * BYTES_PER_TILE as i16) as u16)
+                tile_data.wrapping_add((bg_index as i8 as i16 * BYTES_PER_TILE as i16) as u16)
             };
 
             let pixels = PPU::compose_pixels(
-                self.read_byte(bg_address + tile_pixel_offset_y * BYTES_PER_LINE as u16),
-                self.read_byte(bg_address + tile_pixel_offset_y * BYTES_PER_LINE as u16 + 1),
+                self.read_byte(tile_address + tile_pixel_offset_y * BYTES_PER_LINE as u16),
+                self.read_byte(tile_address + tile_pixel_offset_y * BYTES_PER_LINE as u16 + 1),
             );
 
             let start_x_offset = x % BASE_TILE_WIDTH;
@@ -412,7 +417,64 @@ impl PPU {
         res
     }
 
-    fn draw_window(&mut self) {}
+    fn draw_window(&mut self) {
+        if self.wy > self.ly || self.wx > GB_SCREEN_WIDTH as u8 || self.wy > GB_SCREEN_HEIGHT as u8
+        {
+            return; // line isn't in window area yet
+        }
+
+        let window_map: u16 = if is_set(self.lcdc, LCDCBits::WindowTileMap as u8) {
+            0x9C00
+        } else {
+            0x9800
+        };
+
+        let tile_data_flag = is_set(self.lcdc, LCDCBits::BgWindowTiles as u8);
+        let tile_data: u16 = if tile_data_flag {
+            VRAM_BASE_ADDRESS
+        } else {
+            0x9000
+        };
+
+        let tile_y = (self.ly - self.wy) as usize / BASE_TILE_WIDTH;
+        let tile_pixel_offset_y = (self.ly - self.wy) as u16 % BASE_TILE_WIDTH as u16;
+
+        let mut x = self.wx as usize - 7;
+        while x < GB_SCREEN_WIDTH {
+            let tile_x = (x + 7 - self.wx as usize) / BASE_TILE_WIDTH;
+
+            let tile_index = tile_y * TILE_MAP_WIDTH + tile_x;
+            let tile_data_index = self.read_byte(window_map + tile_index as u16);
+
+            let tile_address = if tile_data_flag {
+                // 8000 method
+                tile_data + tile_data_index as u16 * BYTES_PER_TILE as u16
+            } else {
+                // 8800 method
+                tile_data
+                    .wrapping_add((tile_data_index as i8 as i16 * BYTES_PER_TILE as i16) as u16)
+            };
+
+            let pixels = PPU::compose_pixels(
+                self.read_byte(tile_address + tile_pixel_offset_y * BYTES_PER_LINE as u16),
+                self.read_byte(tile_address + tile_pixel_offset_y * BYTES_PER_LINE as u16 + 1),
+            );
+
+            let start_x_offset = x % BASE_TILE_WIDTH;
+            let pixels_to_draw = (BASE_TILE_WIDTH - start_x_offset).min(GB_SCREEN_WIDTH - x);
+
+            self.draw_pixels(
+                self.ly as usize * GB_SCREEN_WIDTH + x,
+                pixels,
+                start_x_offset,
+                pixels_to_draw,
+                self.bgp,
+                None,
+            );
+
+            x += pixels_to_draw;
+        }
+    }
 
     fn draw_pixels(
         &mut self,
