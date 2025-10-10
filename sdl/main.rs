@@ -148,20 +148,20 @@ fn main() {
 
                 // start select A B
                 Event::KeyDown {
-                    keycode: Some(Keycode::I),
+                    keycode: Some(Keycode::Return),
                     ..
                 } => gb.on_button_press(GBButton::Button(JoypadButton::Start)),
                 Event::KeyUp {
-                    keycode: Some(Keycode::I),
+                    keycode: Some(Keycode::Return),
                     ..
                 } => gb.on_button_release(GBButton::Button(JoypadButton::Start)),
 
                 Event::KeyDown {
-                    keycode: Some(Keycode::O),
+                    keycode: Some(Keycode::Tab),
                     ..
                 } => gb.on_button_press(GBButton::Button(JoypadButton::Select)),
                 Event::KeyUp {
-                    keycode: Some(Keycode::O),
+                    keycode: Some(Keycode::Tab),
                     ..
                 } => gb.on_button_release(GBButton::Button(JoypadButton::Select)),
 
