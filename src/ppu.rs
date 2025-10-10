@@ -315,11 +315,15 @@ impl PPU {
 
                 let address = VRAM_BASE_ADDRESS + tile_offset + line_offset;
 
-                let mut pixels =
-                    PPU::compose_pixels(self.read_byte(address), self.read_byte(address + 1));
+                let mut p1 = self.read_byte(address);
+                let mut p2 = self.read_byte(address + 1);
+
                 if xflip {
-                    pixels = pixels.reverse_bits();
+                    p1 = p1.reverse_bits();
+                    p2 = p2.reverse_bits();
                 }
+
+                let pixels = PPU::compose_pixels(p1, p2);
 
                 let frame_base = self.ly as usize * GB_SCREEN_WIDTH + x_start as usize;
 
