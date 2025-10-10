@@ -55,11 +55,7 @@ impl MBC for MBC1 {
 
     fn write_byte(&mut self, address: u16, byte: u8) {
         match address {
-            0x0000..=0x1FFF => {
-                if byte & 0x0F == 0x0A {
-                    self.ram_enable = true;
-                }
-            }
+            0x0000..=0x1FFF => self.ram_enable = (byte & 0x0F) == 0x0A,
             0x2000..=0x3FFF => {
                 self.rom_bank_number = byte & 0b11111;
             }
@@ -84,7 +80,7 @@ impl MBC for MBC1 {
                     };
 
                     if address < self.ram.len() {
-                        self.ram[address];
+                        self.ram[address] = byte;
                     }
                 }
             }

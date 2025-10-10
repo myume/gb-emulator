@@ -5,8 +5,10 @@ use std::{
 };
 
 use crate::cartridge::mbc1::MBC1;
+use crate::cartridge::mbc3::MBC3;
 
 mod mbc1;
+mod mbc3;
 
 pub const ROM_BANK_SIZE: usize = 0x4000;
 pub const RAM_BANK_SIZE: usize = 0x2000;
@@ -25,6 +27,10 @@ impl Cartridge {
         f.read_to_end(&mut rom)?;
 
         let title = String::from_utf8_lossy(&rom[0x0134..0x0143]).to_string();
+
+        if rom[0x143] == 0xC0 {
+            panic!("CGB cartridge not supported");
+        }
 
         let cart_type = rom[0x147];
         // let rom_size = ROM_BANK_SIZE * 2 * (1 << rom[0x148]);
@@ -46,6 +52,7 @@ impl Cartridge {
                 Box::new(mbc)
             }
             0x01..=0x03 => Box::new(MBC1::new(rom, ram_size)),
+            0x0F..=0x13 => Box::new(MBC3::new(rom, ram_size)),
             _ => panic!("Unsupported cartridge type: {:#04X}", cart_type),
         };
 
