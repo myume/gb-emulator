@@ -57,6 +57,7 @@ fn get_screen_rect(win_w: u32, win_h: u32) -> Rect {
 
 fn main() {
     let args = Args::parse();
+    let mut speedup = 1;
 
     let cartridge = match Cartridge::load_cartridge(&PathBuf::from(&args.cartridge_path)) {
         Ok(cart) => cart,
@@ -189,11 +190,22 @@ fn main() {
                 } => {
                     screen_rect = get_screen_rect(w as u32, h as u32);
                 }
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::Backspace),
+                    ..
+                } => {
+                    if speedup > 1 {
+                        speedup = 1;
+                    } else {
+                        speedup = 20
+                    }
+                }
                 _ => {}
             }
         }
 
-        while cycles_counter < CYCLES_PER_FRAME as Cycles {
+        while cycles_counter < CYCLES_PER_FRAME as Cycles * speedup {
             cycles_counter += gb.tick();
         }
         cycles_counter %= CYCLES_PER_FRAME as Cycles;
