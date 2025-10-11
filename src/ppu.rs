@@ -447,7 +447,11 @@ impl PPU {
         let tile_y = self.window_line_counter as usize / BASE_TILE_WIDTH;
         let tile_pixel_offset_y = (self.ly - self.wy) as u16 % BASE_TILE_WIDTH as u16;
 
-        let mut x = self.wx as usize - 7;
+        let mut x = if self.wx >= 7 {
+            self.wx as usize - 7
+        } else {
+            0
+        };
         while x < GB_SCREEN_WIDTH {
             let tile_x = (x + 7 - self.wx as usize) / BASE_TILE_WIDTH;
 
