@@ -301,6 +301,12 @@ impl PPU {
             {
                 num_sprites += 1;
                 let tile_index = self.read_byte(sprite_address + 2);
+                let tile_index = if obj_size == 16 {
+                    // Bit 0 of tile index for 8x16 objects should be ignored
+                    tile_index & 0xFE
+                } else {
+                    tile_index
+                };
                 let sprite_flags = self.read_byte(sprite_address + 3);
 
                 let yflip = is_set(sprite_flags, SpriteFlags::YFlip as u8);
