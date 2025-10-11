@@ -196,6 +196,9 @@ impl PPU {
     }
 
     pub fn tick(&mut self, cycles: Cycles) {
+        if !is_set(self.lcdc, LCDCBits::LCDEnable as u8) {
+            return;
+        }
         self.mode_clock = self.mode_clock + cycles;
 
         match self.mode {
