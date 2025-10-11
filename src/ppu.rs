@@ -103,6 +103,7 @@ pub struct PPU {
     obp1: Palette,
 
     frame: [Color; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
+    display: [Color; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
 
     palette: [Color; 4],
     interrupt_flag: Rc<RefCell<u8>>,
@@ -134,6 +135,7 @@ impl PPU {
             obp1: 0,
 
             frame: [MONOCHROME_PALETTE[0]; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
+            display: [MONOCHROME_PALETTE[0]; GB_SCREEN_HEIGHT * GB_SCREEN_WIDTH],
             palette: MONOCHROME_PALETTE,
             interrupt_flag,
         }
@@ -252,6 +254,7 @@ impl PPU {
         let flag = *self.interrupt_flag.borrow();
         // Request VBlank interrupt
         if new_mode == PPUMode::VBlank {
+            self.display.copy_from_slice(&self.frame);
             self.window_line_counter = 0;
             *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::VBlank as u8);
         }
@@ -529,7 +532,7 @@ impl PPU {
     }
 
     pub fn pixel_data(&self) -> &[u8] {
-        self.frame.as_flattened()
+        self.display.as_flattened()
     }
 }
 
