@@ -331,7 +331,6 @@ impl PPU {
                 let pixels = PPU::compose_pixels(p1, p2);
 
                 let frame_base = self.ly as usize * GB_SCREEN_WIDTH + x_start as usize;
-
                 self.draw_pixels(
                     frame_base,
                     pixels,
@@ -496,12 +495,13 @@ impl PPU {
             }
 
             let color = self.get_color_from_palette(palette, color_index);
+            let pixel_address = frame_base + i - pixels_start_offset;
             if priority.is_some() {
                 if color_index != 0 {
-                    self.frame[frame_base + i] = color;
+                    self.frame[pixel_address] = color;
                 }
             } else {
-                self.frame[frame_base + i] = color;
+                self.frame[pixel_address] = color;
             }
         }
     }
@@ -545,6 +545,14 @@ mod test {
         assert_eq!(
             ppu.frame[0..2],
             [0b00, 0b10].map(|id| MONOCHROME_PALETTE[id])
+        );
+
+        let mut ppu = PPU::new(intflag.clone());
+        ppu.draw_pixels(0, 0b0010111111111000, 2, 2, palettte, None);
+
+        assert_eq!(
+            ppu.frame[0..2],
+            [0b11, 0b11].map(|id| MONOCHROME_PALETTE[id])
         );
     }
 }
