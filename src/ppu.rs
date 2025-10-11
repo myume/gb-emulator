@@ -94,6 +94,7 @@ pub struct PPU {
     // Window Y position, X position plus 7
     wy: u8,
     wx: u8,
+    window_line_counter: u8,
 
     bgp: Palette, // BG palette data
 
@@ -126,6 +127,7 @@ impl PPU {
 
             wy: 0,
             wx: 0,
+            window_line_counter: 0,
 
             bgp: 0,
             obp0: 0,
@@ -247,6 +249,7 @@ impl PPU {
         let flag = *self.interrupt_flag.borrow();
         // Request VBlank interrupt
         if new_mode == PPUMode::VBlank {
+            self.window_line_counter = 0;
             *self.interrupt_flag.borrow_mut() = set_bit(flag, InterruptFlag::VBlank as u8);
         }
 
@@ -435,7 +438,7 @@ impl PPU {
             0x9000
         };
 
-        let tile_y = (self.ly - self.wy) as usize / BASE_TILE_WIDTH;
+        let tile_y = self.window_line_counter as usize / BASE_TILE_WIDTH;
         let tile_pixel_offset_y = (self.ly - self.wy) as u16 % BASE_TILE_WIDTH as u16;
 
         let mut x = self.wx as usize - 7;
@@ -473,6 +476,7 @@ impl PPU {
 
             x += pixels_to_draw;
         }
+        self.window_line_counter += 1;
     }
 
     fn draw_pixels(
