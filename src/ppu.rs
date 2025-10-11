@@ -459,7 +459,11 @@ impl PPU {
             0
         };
         while x < GB_SCREEN_WIDTH {
-            let tile_x = (x + 7 - self.wx as usize) / BASE_TILE_WIDTH;
+            let tile_x = if self.wx >= 7 {
+                x + 7 - self.wx as usize
+            } else {
+                x
+            } / BASE_TILE_WIDTH;
 
             let tile_index = tile_y * TILE_MAP_WIDTH + tile_x;
             let tile_data_index = self.read_byte(window_map + tile_index as u16);
