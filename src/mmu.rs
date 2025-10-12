@@ -57,11 +57,11 @@ impl InterruptFlag {
 
 impl MMU {
     pub fn new(cartridge: Cartridge, print_serial: bool) -> Self {
-        let interrupt_flag = Rc::new(RefCell::new(0));
+        let interrupt_flag = Rc::new(RefCell::new(0xE1));
         MMU {
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
-            dma: 0,
+            dma: 0xFF,
             stub_audio: [0; 0xFF26 - 0xFF10 + 1],
             ppu: PPU::new(interrupt_flag.clone()),
             joypad: Joypad::new(interrupt_flag.clone()),

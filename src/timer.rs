@@ -25,11 +25,13 @@ impl Timer {
         Timer {
             clock: 0,
             tima_clock: 0,
-            div: 0,
+            div: 0xAB,
             tima: 0,
             tma: 0,
-            enable: true,
+
+            enable: false,
             frequency: 256 * 4,
+
             interrupt_flag,
         }
     }

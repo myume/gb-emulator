@@ -117,11 +117,11 @@ impl PPU {
             oam: [0; OAM_SIZE],
             vram: [0; VRAM_SIZE],
 
-            lcdc: 0,
+            lcdc: 0x91,
 
             ly: 0,
             lyc: 0,
-            stat: 0,
+            stat: 0x85,
 
             scy: 0,
             scx: 0,
@@ -130,7 +130,7 @@ impl PPU {
             wx: 0,
             window_line_counter: 0,
 
-            bgp: 0,
+            bgp: 0xFC,
             obp0: 0,
             obp1: 0,
 
