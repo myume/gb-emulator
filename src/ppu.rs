@@ -432,9 +432,11 @@ impl PPU {
     }
 
     fn draw_window(&mut self) {
-        if self.wy > self.ly || self.wx > GB_SCREEN_WIDTH as u8 || self.wy > GB_SCREEN_HEIGHT as u8
+        if self.wy > self.ly
+            || self.wx >= GB_SCREEN_WIDTH as u8 + 7
+            || self.wy >= GB_SCREEN_HEIGHT as u8
         {
-            return; // line isn't in window area yet
+            return;
         }
 
         let window_map: u16 = if is_set(self.lcdc, LCDCBits::WindowTileMap as u8) {
@@ -451,19 +453,16 @@ impl PPU {
         };
 
         let tile_y = self.window_line_counter as usize / BASE_TILE_WIDTH;
-        let tile_pixel_offset_y = (self.ly - self.wy) as u16 % BASE_TILE_WIDTH as u16;
+        let tile_pixel_offset_y = self.window_line_counter as u16 % BASE_TILE_WIDTH as u16;
 
-        let mut x = if self.wx >= 7 {
-            self.wx as usize - 7
-        } else {
-            0
-        };
+        let win_start_x = (self.wx as i16 - 7).max(0) as usize;
+
+        let pixels_clipped_on_left = if self.wx < 7 { 7 - self.wx } else { 0 } as usize;
+
+        let mut x = win_start_x;
         while x < GB_SCREEN_WIDTH {
-            let tile_x = if self.wx >= 7 {
-                x + 7 - self.wx as usize
-            } else {
-                x
-            } / BASE_TILE_WIDTH;
+            let win_pixel_x = (x - win_start_x) + pixels_clipped_on_left;
+            let tile_x = win_pixel_x / BASE_TILE_WIDTH;
 
             let tile_index = tile_y * TILE_MAP_WIDTH + tile_x;
             let tile_data_index = self.read_byte(window_map + tile_index as u16);
@@ -482,7 +481,7 @@ impl PPU {
                 self.read_byte(tile_address + tile_pixel_offset_y * BYTES_PER_LINE as u16 + 1),
             );
 
-            let start_x_offset = x % BASE_TILE_WIDTH;
+            let start_x_offset = win_pixel_x % BASE_TILE_WIDTH;
             let pixels_to_draw = (BASE_TILE_WIDTH - start_x_offset).min(GB_SCREEN_WIDTH - x);
 
             self.draw_pixels(
