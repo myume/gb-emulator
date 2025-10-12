@@ -1,11 +1,16 @@
-use crate::cartridge::{MBC, RAM_BANK_SIZE, ROM_BANK_SIZE};
+use std::time::Instant;
+
+use crate::{
+    cartridge::{MBC, RAM_BANK_SIZE, ROM_BANK_SIZE},
+    utils::{is_set, reset_bit, set_bit},
+};
 
 struct RTCRegs {
-    s: u8,
-    m: u8,
-    h: u8,
-    dl: u8,
-    dh: u8,
+    seconds: u8,
+    minutes: u8,
+    hours: u8,
+    day_counter_low: u8,
+    day_counter_high: u8,
 }
 
 pub struct MBC3 {
@@ -18,6 +23,8 @@ pub struct MBC3 {
 
     rtc: RTCRegs,
     latch: u8,
+
+    init_time: Instant,
 }
 
 impl MBC3 {
@@ -31,14 +38,44 @@ impl MBC3 {
             ram_rtc_select: 0,
 
             rtc: RTCRegs {
-                s: 0,
-                m: 0,
-                h: 0,
-                dl: 0,
-                dh: 0,
+                seconds: 0,
+                minutes: 0,
+                hours: 0,
+                day_counter_low: 0,
+                day_counter_high: 0,
             },
             latch: 0xFF,
+            init_time: Instant::now(),
         }
+    }
+
+    fn refresh_clock(&mut self) {
+        // timer is stopped
+        if is_set(self.rtc.day_counter_high, 6) {
+            return;
+        }
+
+        self.rtc.day_counter_high = set_bit(self.rtc.day_counter_high, 6);
+
+        let duration = self.init_time.elapsed();
+
+        let secs = duration.as_secs();
+        self.rtc.seconds = (secs % 60) as u8;
+        let mins = secs / 60;
+        self.rtc.minutes = (mins % 60) as u8;
+        let hours = mins / 60;
+        self.rtc.hours = (hours % 24) as u8;
+        let days = hours / 24;
+        self.rtc.day_counter_low = (days & 0xFF) as u8;
+
+        if days & 0x0100 != 0 {
+            self.rtc.day_counter_high = set_bit(self.rtc.day_counter_high, 0);
+        }
+        if days > 0x1FF {
+            self.rtc.day_counter_high = set_bit(self.rtc.day_counter_high, 7);
+        }
+
+        self.rtc.day_counter_high = reset_bit(self.rtc.day_counter_high, 6);
     }
 }
 
@@ -59,11 +96,11 @@ impl MBC for MBC3 {
                                 + address as usize
                                 - 0xA000]
                         }
-                        0x08 => self.rtc.s,
-                        0x09 => self.rtc.m,
-                        0x0A => self.rtc.h,
-                        0x0B => self.rtc.dl,
-                        0x0C => self.rtc.dh,
+                        0x08 => self.rtc.seconds,
+                        0x09 => self.rtc.minutes,
+                        0x0A => self.rtc.hours,
+                        0x0B => self.rtc.day_counter_low,
+                        0x0C => self.rtc.day_counter_high,
                         _ => panic!("Invalid ram_rtc_select: {:#04X}", self.ram_rtc_select),
                     }
                 } else {
@@ -85,7 +122,9 @@ impl MBC for MBC3 {
                 self.ram_rtc_select = byte;
             }
             0x6000..=0x7FFF => {
-                if self.latch == 0x00 && byte == 0x01 {}
+                if self.latch == 0x00 && byte == 0x01 {
+                    self.refresh_clock();
+                }
                 self.latch = byte;
             }
             0xA000..=0xBFFF => {
@@ -96,11 +135,18 @@ impl MBC for MBC3 {
                                 + address as usize
                                 - 0xA000] = byte
                         }
-                        0x08 => self.rtc.s = byte,
-                        0x09 => self.rtc.m = byte,
-                        0x0A => self.rtc.h = byte,
-                        0x0B => self.rtc.dl = byte,
-                        0x0C => self.rtc.dh = byte,
+                        0x08..=0x0C => {
+                            self.rtc.day_counter_high = set_bit(self.rtc.day_counter_high, 6);
+                            match self.ram_rtc_select {
+                                0x08 => self.rtc.seconds = byte,
+                                0x09 => self.rtc.minutes = byte,
+                                0x0A => self.rtc.hours = byte,
+                                0x0B => self.rtc.day_counter_low = byte,
+                                0x0C => self.rtc.day_counter_high = byte,
+                                _ => panic!("Invalid ram_rtc_select: {:#04X}", self.ram_rtc_select),
+                            }
+                            self.rtc.day_counter_high = reset_bit(self.rtc.day_counter_high, 6);
+                        }
                         _ => panic!("Invalid ram_rtc_select: {:#04X}", self.ram_rtc_select),
                     }
                 }
