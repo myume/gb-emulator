@@ -168,11 +168,18 @@ impl PPU {
         match address {
             0x8000..=0x9FFF => self.vram[(address - 0x8000) as usize] = byte,
             0xFE00..=0xFE9F => self.oam[(address - 0xFE00) as usize] = byte,
-            0xFF40 => self.lcdc = byte,
-            0xFF41 => self.stat = byte,
+            0xFF40 => {
+                self.lcdc = byte;
+                if !is_set(self.lcdc, LCDCBits::LCDEnable as u8) {
+                    self.mode_clock = 0;
+                    self.ly = 0;
+                    self.mode = PPUMode::HBlank;
+                }
+            }
+            0xFF41 => self.stat = (byte & 0xF8) | (self.stat & 0x07),
             0xFF42 => self.scy = byte,
             0xFF43 => self.scx = byte,
-            0xFF44 => self.ly = byte,
+            0xFF44 => {}
             0xFF45 => self.lyc = byte,
             0xFF47 => self.bgp = byte,
             0xFF48 => self.obp0 = byte,
@@ -201,6 +208,7 @@ impl PPU {
         if !is_set(self.lcdc, LCDCBits::LCDEnable as u8) {
             return;
         }
+
         self.mode_clock = self.mode_clock + cycles;
 
         match self.mode {
@@ -518,15 +526,15 @@ impl PPU {
         for i in pixels_start_offset..pixels_start_offset + pixels_to_draw {
             let shift = 2 * (BASE_TILE_WIDTH - i - 1);
             let color_index = (pixels >> shift & 0b11) as u8;
+            let pixel_address = frame_base + i - pixels_start_offset;
 
             if Some(true) == priority
-                && self.frame[frame_base + i] != self.get_color_from_palette(self.bgp, 0)
+                && self.frame[pixel_address] != self.get_color_from_palette(self.bgp, 0)
             {
                 continue;
             }
 
             let color = self.get_color_from_palette(palette, color_index);
-            let pixel_address = frame_base + i - pixels_start_offset;
             if priority.is_some() {
                 if color_index != 0 {
                     self.frame[pixel_address] = color;

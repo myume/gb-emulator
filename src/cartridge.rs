@@ -28,9 +28,9 @@ impl Cartridge {
 
         let title = String::from_utf8_lossy(&rom[0x0134..0x0143]).to_string();
 
-        if rom[0x143] == 0xC0 {
-            panic!("CGB cartridge not supported");
-        }
+        // if rom[0x143] == 0xC0 {
+        //     panic!("CGB cartridge not supported");
+        // }
 
         let cart_type = rom[0x147];
         // let rom_size = ROM_BANK_SIZE * 2 * (1 << rom[0x148]);
