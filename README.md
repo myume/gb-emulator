@@ -1,5 +1,15 @@
 # gb-emulator
-because i've always wanted to make one
+because i've always wanted to make one.
+
+my only goal with this was to make pokemon red playable and it seems to be working, so let's consider it completed.
+
+## Feature Support
+- working PPU and CPU
+- working Joypad
+- serial bus only implemented for blargg test debugging/printing purposes
+- basic interrupt handling
+- cartridge/gb file parsing
+- no audio support
 
 ## Screenshots
 
