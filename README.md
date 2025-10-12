@@ -20,9 +20,9 @@ because i've always wanted to make one
 | Toggle Speedup    | Backspace    |
 
 ## Codegen
-I was too lazy to manually implement each opcode instruction so I just codegen it all in the [build.rs](https://github.com/myume/gb-emulator/blob/main/build/build.rs). I am generating the implementation for each instruction based on [this JSON file](https://github.com/gbdev/gb-opcodes/blob/master/Opcodes.json).
+I was too lazy to manually implement each opcode instruction individually, so I just codegen it all in the [build.rs](https://github.com/myume/gb-emulator/blob/main/build/build.rs). 
 
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/cbef9e16-e516-4c81-94ab-eed232097a73" />
+The implementation for each instruction is generated based on [this JSON file](https://github.com/gbdev/gb-opcodes/blob/master/Opcodes.json).
 
 ## Testing
 
